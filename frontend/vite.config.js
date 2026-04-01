@@ -9,7 +9,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/commerce': {
-        target: 'http://localhost:3010/', // Backend serverinizin URL-si
+        target: 'https://amdulraxim-production.up.railway.app/', // Backend serverinizin URL-si
         changeOrigin: true,
       },
       alias: {

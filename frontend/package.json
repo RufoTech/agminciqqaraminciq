@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "proxy": "http://localhost:3010",
+  "proxy": "https://amdulraxim-production.up.railway.app",
   "private": true,
   "version": "0.0.0",
   "type": "module",

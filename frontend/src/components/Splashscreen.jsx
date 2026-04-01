@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState } from "react"
 
 /* ─── Yalnız BİR DƏFƏ göstər ─── */
 const SHOWN_KEY = "brendex_onboarding_done"
@@ -8,7 +8,7 @@ const SHOWN_KEY = "brendex_onboarding_done"
 ══════════════════════════════════════════════ */
 function Phase1({ onDone }) {
   const [step, setStep] = useState(0)
-  // 0: icon pop  1: line draw  2: subtitle  3: exit
+
   useEffect(() => {
     const t1 = setTimeout(() => setStep(1), 600)
     const t2 = setTimeout(() => setStep(2), 1200)
@@ -21,10 +21,8 @@ function Phase1({ onDone }) {
     <div className={`ob-phase ob-p1 ${step === 3 ? "ob-exit" : "ob-enter"}`}>
       <div className="ob-p1-center">
 
-        {/* Icon glow ring */}
         <div className={`ob-p1-ring ${step >= 1 ? "ob-p1-ring-on" : ""}`} />
 
-        {/* Logo icon */}
         <div className={`ob-p1-icon ${step >= 0 ? "ob-p1-icon-show" : ""}`}>
           <svg width="60" height="60" viewBox="0 0 64 64" fill="none">
             <defs>
@@ -46,15 +44,12 @@ function Phase1({ onDone }) {
           </svg>
         </div>
 
-        {/* Brand name */}
         <div className={`ob-p1-brand ${step >= 1 ? "ob-show" : ""}`}>
           <span className="ob-p1-brend">BREND</span><span className="ob-p1-ex">EX</span>
         </div>
 
-        {/* Animated underline */}
         <div className={`ob-p1-line ${step >= 1 ? "ob-p1-line-draw" : ""}`} />
 
-        {/* Subtitle */}
         <p className={`ob-p1-sub ${step >= 2 ? "ob-show" : ""}`}>
           Alışın yeni ünvanı
         </p>
@@ -67,7 +62,6 @@ function Phase1({ onDone }) {
    PHASE 2 — Dünya xəritəsi animasiyası (2-4s)
 ══════════════════════════════════════════════ */
 const TURKIC_COUNTRIES = [
-  // [cx, cy, r, label, delay]
   { cx: 285, cy: 108, r: 8,  label: "AZ",  delay: 0 },
   { cx: 252, cy: 105, r: 6,  label: "TR",  delay: 0.15 },
   { cx: 330, cy: 100, r: 7,  label: "KZ",  delay: 0.3 },
@@ -78,7 +72,7 @@ const TURKIC_COUNTRIES = [
 
 function Phase2({ onDone }) {
   const [step, setStep] = useState(0)
-  // 0: map fade-in  1: dots light up  2: text  3: transform  4: exit
+
   useEffect(() => {
     const t1 = setTimeout(() => setStep(1), 400)
     const t2 = setTimeout(() => setStep(2), 1200)
@@ -91,11 +85,8 @@ function Phase2({ onDone }) {
   return (
     <div className={`ob-phase ob-p2 ${step === 4 ? "ob-exit" : "ob-enter"}`}>
 
-      {/* MAP area */}
       <div className={`ob-p2-map-wrap ${step >= 3 ? "ob-p2-map-shrink" : ""}`}>
         <div className={`ob-p2-map ${step >= 0 ? "ob-show" : ""}`}>
-
-          {/* Simplified world map using SVG paths */}
           <svg viewBox="0 0 500 220" style={{ width:"100%", height:"100%" }}>
             <defs>
               <radialGradient id="dotglow" cx="50%" cy="50%" r="50%">
@@ -103,33 +94,20 @@ function Phase2({ onDone }) {
                 <stop offset="100%" stopColor="#E8192C" stopOpacity="0"/>
               </radialGradient>
             </defs>
-
-            {/* Ocean bg */}
             <rect width="500" height="220" fill="#e8f4fd" rx="16"/>
-
-            {/* Simplified continents */}
-            {/* Europe */}
             <path d="M200 60 Q215 50 230 55 Q240 52 245 58 Q250 54 255 60 Q258 68 252 75 Q245 80 238 78 Q230 82 220 78 Q212 80 205 72 Z" fill="#c8dfc8" opacity="0.7"/>
-            {/* Asia */}
             <path d="M245 55 Q280 45 330 48 Q380 50 410 60 Q430 70 425 90 Q420 110 400 115 Q370 120 340 115 Q310 118 290 112 Q265 108 255 95 Q245 82 248 68 Z" fill="#c8dfc8" opacity="0.7"/>
-            {/* Africa */}
             <path d="M215 85 Q230 82 240 90 Q245 105 242 125 Q238 145 228 155 Q218 160 210 150 Q200 138 202 118 Q203 100 215 85 Z" fill="#c8dfc8" opacity="0.7"/>
-            {/* Americas */}
             <path d="M80 55 Q100 48 115 58 Q125 70 120 90 Q118 110 108 120 Q95 128 85 118 Q72 105 75 85 Q75 68 80 55 Z" fill="#c8dfc8" opacity="0.7"/>
             <path d="M90 128 Q105 122 112 135 Q115 150 108 168 Q100 182 90 180 Q78 175 78 160 Q76 142 90 128 Z" fill="#c8dfc8" opacity="0.7"/>
-            {/* Australia */}
             <path d="M370 140 Q390 135 405 142 Q415 152 410 165 Q402 175 388 172 Q374 168 370 157 Z" fill="#c8dfc8" opacity="0.7"/>
 
-            {/* Package icons moving between turkic countries */}
-            {step >= 1 && TURKIC_COUNTRIES.map((c, i) => (
+            {step >= 1 && TURKIC_COUNTRIES.map((c) => (
               <g key={c.label} style={{ animation: `ob-dot-pop 0.4s ease ${c.delay}s both` }}>
-                {/* Glow */}
                 <circle cx={c.cx} cy={c.cy} r={c.r * 2.5} fill="url(#dotglow)" opacity="0.3"
                   style={{ animation: `ob-pulse 2s ease-in-out ${c.delay}s infinite` }}/>
-                {/* Dot */}
                 <circle cx={c.cx} cy={c.cy} r={c.r} fill="#E8192C"/>
                 <circle cx={c.cx} cy={c.cy} r={c.r * 0.45} fill="white"/>
-                {/* Label */}
                 <text x={c.cx} y={c.cy - c.r - 4} textAnchor="middle"
                   fontSize="7" fontWeight="700" fill="#E8192C" fontFamily="Sora,sans-serif">
                   {c.label}
@@ -137,7 +115,6 @@ function Phase2({ onDone }) {
               </g>
             ))}
 
-            {/* Connection lines between dots */}
             {step >= 1 && TURKIC_COUNTRIES.map((from, i) =>
               TURKIC_COUNTRIES.slice(i + 1, i + 2).map((to, j) => (
                 <line key={`${i}-${j}`}
@@ -148,7 +125,6 @@ function Phase2({ onDone }) {
               ))
             )}
 
-            {/* Moving package icons */}
             {step >= 1 && [
               { fromX:285, fromY:108, toX:252, toY:105, delay:"0.5s" },
               { fromX:330, fromY:100, toX:285, toY:108, delay:"0.8s" },
@@ -165,7 +141,6 @@ function Phase2({ onDone }) {
           </svg>
         </div>
 
-        {/* Transform overlay — logo appears over map */}
         {step >= 3 && (
           <div className="ob-p2-logo-over">
             <svg width="70" height="70" viewBox="0 0 64 64" fill="none">
@@ -190,11 +165,9 @@ function Phase2({ onDone }) {
         )}
       </div>
 
-      {/* Text */}
       <p className={`ob-p2-text ${step >= 2 ? "ob-show" : ""}`}>
         Türk dünyasının yeni ticarət platforması
       </p>
-
     </div>
   )
 }
@@ -277,23 +250,18 @@ function Phase3({ onDone }) {
   return (
     <div className={`ob-phase ob-p3 ${isExiting ? "ob-exit" : "ob-enter"}`} style={{ background: s.bg, transition: "background 0.6s ease" }}>
 
-      {/* Slide content */}
       <div className="ob-p3-content" key={slide} style={{ animation: `ob-slide-in-${animDir} 0.4s cubic-bezier(0.34,1.2,0.64,1) both` }}>
-
         <div className="ob-p3-icon-wrap">
           {s.icon}
         </div>
-
         <h2 className="ob-p3-title" style={{ color: s.color }}>
           {s.title}
         </h2>
-
         <p className="ob-p3-sub">
           {s.sub}
         </p>
       </div>
 
-      {/* Dots */}
       <div className="ob-p3-dots">
         {SLIDES.map((_, i) => (
           <button key={i} className={`ob-p3-dot ${i === slide ? "active" : ""}`}
@@ -303,7 +271,6 @@ function Phase3({ onDone }) {
         ))}
       </div>
 
-      {/* Nav buttons */}
       <div className="ob-p3-nav">
         {slide < SLIDES.length - 1 ? (
           <>
@@ -324,28 +291,34 @@ function Phase3({ onDone }) {
           </button>
         )}
       </div>
-
     </div>
   )
 }
 
 /* ══════════════════════════════════════════════
-   ANA KOMPONENT
+   ANA KOMPONENT — SplashScreen
 ══════════════════════════════════════════════ */
 const SplashScreen = ({ onFinish }) => {
-  // ilk dəfəmi yoxla
   const isFirst = !localStorage.getItem(SHOWN_KEY)
-  const [phase, setPhase] = useState(1) // 1 | 2 | 3 | done
-
-  const next = (n) => setPhase(n)
-
-  const finish = () => {
-    localStorage.setItem(SHOWN_KEY, "1")
-    onFinish?.()
-  }
-
-  // Əgər onboarding artıq göstərilib → birbaşa Phase1 (splash) göstər, slider yox
+  const [phase, setPhase] = useState(1) // 1 | 2 | 3 | "done"
   const [showSlider] = useState(isFirst)
+
+  // ✅ DÜZƏLİŞ 1: render zamanı deyil, useEffect ilə çağırılır
+  // Əvvəlki: {phase === "done" && finish()} — render zamanı setState çağırırdı → XƏTA
+  // İndi: useEffect phase dəyişəndə işləyir — render bitdikdən sonra
+  useEffect(() => {
+    if (phase === "done") {
+      localStorage.setItem(SHOWN_KEY, "1")
+      // ✅ DÜZƏLİŞ 2: onFinish null/undefined yoxlaması
+      // user null olduqda onFinish içindəki kod xəta verə bilər
+      // onFinish?.() — optional chaining ilə təhlükəsiz çağırış
+      if (typeof onFinish === "function") {
+        onFinish()
+      }
+    }
+  }, [phase, onFinish])
+
+  const finish = () => setPhase("done")
 
   return (
     <>
@@ -353,7 +326,6 @@ const SplashScreen = ({ onFinish }) => {
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800;900&display=swap');
         * { box-sizing: border-box; }
 
-        /* ── Global phase wrapper ── */
         .ob-phase {
           position: fixed; inset: 0; z-index: 9999;
           display: flex; flex-direction: column;
@@ -369,15 +341,13 @@ const SplashScreen = ({ onFinish }) => {
         .ob-show { animation: ob-rise 0.45s cubic-bezier(0.34,1.2,0.64,1) both; }
         @keyframes ob-rise { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
 
-        /* ════════ PHASE 1 ════════ */
+        /* PHASE 1 */
         .ob-p1 { background: #fdf2f4; }
-
         .ob-p1-center {
           display: flex; flex-direction: column;
           align-items: center; gap: 0;
           position: relative; z-index: 1;
         }
-
         .ob-p1-ring {
           width: 140px; height: 140px; border-radius: 50%;
           border: 1.5px solid rgba(232,25,44,0.15);
@@ -386,7 +356,6 @@ const SplashScreen = ({ onFinish }) => {
           transition: all 0.7s cubic-bezier(0.34,1.4,0.64,1);
         }
         .ob-p1-ring-on { opacity: 1; transform: scale(1); }
-
         .ob-p1-icon {
           width: 96px; height: 96px; border-radius: 26px;
           background: white;
@@ -401,7 +370,6 @@ const SplashScreen = ({ onFinish }) => {
           70%  { opacity:1; transform:scale(1.07) }
           100% { opacity:1; transform:scale(1) }
         }
-
         .ob-p1-brand {
           font-size: 32px; font-weight: 900; letter-spacing: -1px;
           margin-bottom: 10px; opacity: 0;
@@ -409,7 +377,6 @@ const SplashScreen = ({ onFinish }) => {
         .ob-p1-brand.ob-show { animation: ob-rise 0.4s ease 0.1s both; }
         .ob-p1-brend { color: #E8192C; }
         .ob-p1-ex    { color: #1a1a1a; }
-
         .ob-p1-line {
           height: 3px; border-radius: 99px;
           background: linear-gradient(90deg, #E8192C, #ff5263);
@@ -417,15 +384,12 @@ const SplashScreen = ({ onFinish }) => {
           transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
         }
         .ob-p1-line-draw { width: 120px; }
-
         .ob-p1-sub {
           font-size: 14px; font-weight: 500;
           color: #9b4458; letter-spacing: 0.5px;
           margin: 0; opacity: 0;
         }
         .ob-p1-sub.ob-show { animation: ob-rise 0.4s ease 0.2s both; }
-
-        /* Soft blobs */
         .ob-p1::before {
           content:''; position:absolute; inset:0; z-index:0;
           background:
@@ -433,12 +397,11 @@ const SplashScreen = ({ onFinish }) => {
             radial-gradient(circle at 85% 80%, rgba(200,0,26,0.07) 0%, transparent 50%);
         }
 
-        /* ════════ PHASE 2 ════════ */
+        /* PHASE 2 */
         .ob-p2 {
           background: linear-gradient(160deg, #f8fbff 0%, #edf5ff 100%);
           gap: 24px; padding: 32px;
         }
-
         .ob-p2-map-wrap {
           width: 100%; max-width: 500px;
           border-radius: 20px; overflow: hidden;
@@ -446,30 +409,20 @@ const SplashScreen = ({ onFinish }) => {
           position: relative;
           transition: all 0.5s cubic-bezier(0.34,1.2,0.64,1);
         }
-        .ob-p2-map-shrink {
-          transform: scale(0.3);
-          opacity: 0;
-        }
-
-        .ob-p2-map {
-          width: 100%; opacity: 0;
-          transition: opacity 0.5s ease;
-        }
+        .ob-p2-map-shrink { transform: scale(0.3); opacity: 0; }
+        .ob-p2-map { width: 100%; opacity: 0; transition: opacity 0.5s ease; }
         .ob-p2-map.ob-show { opacity: 1; }
-
         .ob-p2-logo-over {
           position: absolute; inset: 0;
           display: flex; align-items: center; justify-content: center;
           animation: ob-icon-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
         }
-
         .ob-p2-text {
           font-size: 16px; font-weight: 700; color: #1a3a5c;
           text-align: center; max-width: 320px;
           margin: 0; opacity: 0; line-height: 1.5;
         }
         .ob-p2-text.ob-show { animation: ob-rise 0.5s ease both; }
-
         @keyframes ob-dot-pop {
           from { opacity:0; transform:scale(0) }
           to   { opacity:1; transform:scale(1) }
@@ -489,18 +442,13 @@ const SplashScreen = ({ onFinish }) => {
           100% { opacity:0; transform:translate(-30px, -3px) }
         }
 
-        /* ════════ PHASE 3 ════════ */
-        .ob-p3 {
-          padding: 48px 32px 40px;
-          justify-content: space-between;
-        }
-
+        /* PHASE 3 */
+        .ob-p3 { padding: 48px 32px 40px; justify-content: space-between; }
         .ob-p3-content {
           display: flex; flex-direction: column;
           align-items: center; text-align: center;
           flex: 1; justify-content: center; gap: 20px;
         }
-
         .ob-p3-icon-wrap {
           width: 120px; height: 120px; border-radius: 32px;
           background: white;
@@ -508,17 +456,14 @@ const SplashScreen = ({ onFinish }) => {
           display: flex; align-items: center; justify-content: center;
           margin-bottom: 8px;
         }
-
         .ob-p3-title {
           font-size: 26px; font-weight: 800; margin: 0;
           letter-spacing: -0.5px; line-height: 1.2;
         }
-
         .ob-p3-sub {
           font-size: 15px; font-weight: 400; color: #6b7280;
           margin: 0; line-height: 1.6; max-width: 280px;
         }
-
         @keyframes ob-slide-in-right {
           from { opacity:0; transform:translateX(40px) }
           to   { opacity:1; transform:translateX(0) }
@@ -527,12 +472,7 @@ const SplashScreen = ({ onFinish }) => {
           from { opacity:0; transform:translateX(-40px) }
           to   { opacity:1; transform:translateX(0) }
         }
-
-        /* Dots */
-        .ob-p3-dots {
-          display: flex; gap: 8px; align-items: center;
-          margin-bottom: 32px;
-        }
+        .ob-p3-dots { display: flex; gap: 8px; align-items: center; margin-bottom: 32px; }
         .ob-p3-dot {
           border: none; cursor: pointer; padding: 0;
           border-radius: 99px;
@@ -540,23 +480,17 @@ const SplashScreen = ({ onFinish }) => {
           width: 8px; height: 8px;
         }
         .ob-p3-dot.active { width: 28px; height: 8px; }
-
-        /* Buttons */
         .ob-p3-nav {
           width: 100%; display: flex;
-          justify-content: space-between; align-items: center;
-          gap: 12px;
+          justify-content: space-between; align-items: center; gap: 12px;
         }
-
         .ob-p3-skip {
           border: none; background: transparent; cursor: pointer;
           font-family: 'Sora',sans-serif; font-size: 14px;
           font-weight: 600; color: #9ca3af;
-          padding: 14px 20px; border-radius: 14px;
-          transition: color 0.15s;
+          padding: 14px 20px; border-radius: 14px; transition: color 0.15s;
         }
         .ob-p3-skip:hover { color: #6b7280; }
-
         .ob-p3-next {
           border: none; cursor: pointer;
           font-family: 'Sora',sans-serif; font-size: 15px;
@@ -567,7 +501,6 @@ const SplashScreen = ({ onFinish }) => {
           transition: transform 0.15s, box-shadow 0.15s;
         }
         .ob-p3-next:active { transform: scale(0.96); }
-
         .ob-p3-start {
           border: none; cursor: pointer;
           font-family: 'Sora',sans-serif; font-size: 16px;
@@ -581,16 +514,13 @@ const SplashScreen = ({ onFinish }) => {
         .ob-p3-start:active { transform: scale(0.97); }
       `}</style>
 
-      {phase === 1 && (
-        <Phase1 onDone={() => next(2)} />
-      )}
-      {phase === 2 && (
-        <Phase2 onDone={() => next(showSlider ? 3 : "done")} />
-      )}
-      {phase === 3 && (
-        <Phase3 onDone={finish} />
-      )}
-      {phase === "done" && finish()}
+      {phase === 1 && <Phase1 onDone={() => setPhase(2)} />}
+      {phase === 2 && <Phase2 onDone={() => setPhase(showSlider ? 3 : "done")} />}
+      {phase === 3 && <Phase3 onDone={finish} />}
+      {/* ✅ DÜZƏLİŞ 3: {phase === "done" && finish()} silindi
+          Bu render zamanı finish() çağırırdı → App-ın state-ini render zamanı
+          dəyişdirirdi → "Cannot update a component while rendering" xətası
+          İndi yuxarıdakı useEffect idarə edir */}
     </>
   )
 }

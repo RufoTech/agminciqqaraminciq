@@ -26,11 +26,107 @@ import {
   ChevronDown,
   Share2,
   ArrowLeft,
+  Shield,
+  Truck,
+  RotateCcw,
+  ThumbsUp,
+  BadgeCheck,
+  Clock,
+  Package,
 } from "lucide-react"
 
 import { toast, Toaster } from "react-hot-toast"
 import StarRatings from "react-star-ratings"
 
+/* ═══════════════════════════════════════════════════════════════
+   DESIGN TOKENS — Qırmızı + Ağ palitra
+   Yaşıl yalnız stok / uğur bildirişləri üçün
+═══════════════════════════════════════════════════════════════ */
+const t = {
+  /* Qırmızı */
+  red:         "#E8192C",
+  redDark:     "#C0001A",
+  redLight:    "#FFF5F5",
+  redMid:      "#FFE0E3",
+  redBorder:   "#FCCDD1",
+
+  /* Yaşıl — yalnız stok/uğur */
+  green:       "#00A650",
+  greenLight:  "#F0FDF4",
+  greenBorder: "#BBF7D0",
+
+  /* Ağ / Neytral */
+  white:       "#FFFFFF",
+  bg:          "#F5F5F5",
+  border:      "#E8E8E8",
+  borderMid:   "#D1D1D1",
+
+  /* Mətn */
+  textDark:    "#0F1111",
+  textMid:     "#565959",
+  textLight:   "#767676",
+
+  /* Qiymət */
+  priceRed:    "#B12704",
+
+  /* Ulduz */
+  star:        "#FFA41C",
+
+  /* Kölgə */
+  shadow:      "0 2px 8px rgba(0,0,0,0.10)",
+  shadowCard:  "0 1px 3px rgba(0,0,0,0.08)",
+}
+
+/* ── Helpers ── */
+const Divider = () => (
+  <div style={{ height:1, background:t.border, margin:"14px 0" }}/>
+)
+
+const GreenBadge = ({ children }) => (
+  <span style={{
+    display:"inline-flex", alignItems:"center", gap:3,
+    background:t.greenLight, color:t.green,
+    border:`1px solid ${t.greenBorder}`,
+    fontSize:11, fontWeight:700, padding:"2px 7px", borderRadius:4,
+  }}>{children}</span>
+)
+
+const TrustItem = ({ icon, label, sub }) => (
+  <div style={{
+    display:"flex", alignItems:"center", gap:9,
+    flex:1, minWidth:130,
+    padding:"9px 12px", background:t.white,
+    border:`1px solid ${t.border}`, borderRadius:8,
+  }}>
+    <div style={{ color:t.red, flexShrink:0 }}>{icon}</div>
+    <div>
+      <div style={{ fontSize:12, fontWeight:700, color:t.textDark }}>{label}</div>
+      <div style={{ fontSize:11, color:t.textLight }}>{sub}</div>
+    </div>
+  </div>
+)
+
+const RatingBar = ({ value, count, total }) => {
+  const pct = total > 0 ? (count / total) * 100 : 0
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:5 }}>
+      <span style={{ fontSize:12, color:t.textMid, width:12, textAlign:"right", flexShrink:0 }}>{value}</span>
+      <Star size={11} fill={t.star} color={t.star} style={{ flexShrink:0 }}/>
+      <div style={{ flex:1, height:8, background:t.border, borderRadius:4, overflow:"hidden" }}>
+        <div style={{
+          width:`${pct}%`, height:"100%",
+          background:`linear-gradient(90deg,${t.red},${t.redDark})`,
+          borderRadius:4, transition:"width 0.6s",
+        }}/>
+      </div>
+      <span style={{ fontSize:11, color:t.textLight, width:24, textAlign:"right", flexShrink:0 }}>{count}</span>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ANA KOMPONENT
+═══════════════════════════════════════════════════════════════ */
 const ProductDetail = () => {
   const params = useParams()
 
@@ -42,604 +138,741 @@ const ProductDetail = () => {
   const { data: reviewsData, isLoading: reviewsLoading, error: reviewsError } =
     useGetProductReviewsQuery(params?.id, { refetchOnMountOrArgChange: true })
 
-  const [addToCart] = useAddToCartMutation()
-  const [addToFavorites] = useAddToFavoritesMutation()
+  const [addToCart]            = useAddToCartMutation()
+  const [addToFavorites]       = useAddToFavoritesMutation()
   const [createOrUpdateReview] = useCreateOrUpdateReviewMutation()
 
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const [reviewRating, setReviewRating] = useState(0)
+  const [currentImg,    setCurrentImg]    = useState(0)
+  const [reviewRating,  setReviewRating]  = useState(0)
   const [reviewComment, setReviewComment] = useState("")
-  const [quantity, setQuantity] = useState(1)
-  const [descExpanded, setDescExpanded] = useState(false)
+  const [quantity,      setQuantity]      = useState(1)
+  const [descExpanded,  setDescExpanded]  = useState(false)
+  const [isFaved,       setIsFaved]       = useState(false)
+  const [addedToCart,   setAddedToCart]   = useState(false)
 
-  // Countdown timer state — starts at 2h 30m 45s
-  const [timeLeft, setTimeLeft] = useState(2 * 3600 + 30 * 60 + 45)
-
+  /* Countdown */
+  const [timeLeft, setTimeLeft] = useState(2*3600 + 30*60 + 45)
   useEffect(() => {
     if (timeLeft <= 0) return
-    const interval = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0))
-    }, 1000)
-    return () => clearInterval(interval)
+    const iv = setInterval(() => setTimeLeft(p => p > 0 ? p-1 : 0), 1000)
+    return () => clearInterval(iv)
   }, [timeLeft])
-
-  const formatTime = (seconds) => {
-    const h = Math.floor(seconds / 3600)
-    const m = Math.floor((seconds % 3600) / 60)
-    const s = seconds % 60
-    return `${String(h).padStart(2, "0")} : ${String(m).padStart(2, "0")} : ${String(s).padStart(2, "0")}`
+  const fmt = s => {
+    const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60
+    return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`
   }
 
-  const productImages = product?.images || []
-  const productImageUrl =
-    productImages.length > 0
-      ? productImages[currentImageIndex].url
-      : "https://flowbite.s3.amazonaws.com/blocks/e-commerce/imac-front-dark.svg"
+  const imgs   = product?.images || []
+  const imgUrl = imgs.length > 0
+    ? imgs[currentImg].url
+    : "https://flowbite.s3.amazonaws.com/blocks/e-commerce/imac-front-dark.svg"
 
-  const handleAddToCart = async (e) => {
+  /* seller — bazada string kimi saxlanılır */
+  const sellerName =
+    (typeof product?.seller === "string" && product.seller) ||
+    product?.seller?.storeName ||
+    product?.seller?.name ||
+    "Satıcı"
+
+  const reviews    = reviewsData?.reviews || []
+  const totalRev   = reviews.length
+  const ratingDist = [5,4,3,2,1].map(v => ({
+    v, count: reviews.filter(r => Math.round(r.rating) === v).length
+  }))
+
+  const navImg = dir =>
+    setCurrentImg(p =>
+      dir === "prev"
+        ? (p === 0 ? imgs.length-1 : p-1)
+        : (p === imgs.length-1 ? 0 : p+1)
+    )
+
+  const handleAddToCart = async e => {
     e.preventDefault()
     try {
-      await addToCart({ productId: product._id, quantity }).unwrap()
+      await addToCart({ productId:product._id, quantity }).unwrap()
+      setAddedToCart(true)
       toast.success("Məhsul səbətə əlavə edildi")
-    } catch (error) {
-      toast.error("Xəta baş verdi")
-    }
+      setTimeout(() => setAddedToCart(false), 2500)
+    } catch { toast.error("Xəta baş verdi") }
   }
 
-  const handleAddToFavorites = async (e) => {
+  const handleFav = async e => {
     e.preventDefault()
     try {
-      const result = await addToFavorites(product._id).unwrap()
-      if (result.success) toast.success("Favorilərə əlavə edildi")
-    } catch (error) {
-      const message = error.data?.message || "Xəta baş verdi"
-      if (message.toLowerCase().includes("already")) {
-        toast("Bu məhsul artıq favorilərdədir", { icon: "ℹ️" })
-      } else {
-        toast.error(message)
-      }
+      const r = await addToFavorites(product._id).unwrap()
+      if (r.success) { setIsFaved(true); toast.success("Favorilərə əlavə edildi") }
+    } catch (err) {
+      const msg = err.data?.message || "Xəta baş verdi"
+      if (msg.toLowerCase().includes("already")) {
+        setIsFaved(true); toast("Artıq favorilərdədir", { icon:"ℹ️" })
+      } else toast.error(msg)
     }
   }
 
-  const handleImageNavigation = (direction) => {
-    if (direction === "prev") {
-      setCurrentImageIndex((prev) => (prev === 0 ? productImages.length - 1 : prev - 1))
-    } else {
-      setCurrentImageIndex((prev) => (prev === productImages.length - 1 ? 0 : prev + 1))
-    }
-  }
-
-  // ════════════════════════════════════════════════════
-  // getSpecs — kateqoriyaya görə texniki xüsusiyyətlər
-  // ════════════════════════════════════════════════════
+  /* Specs */
   const getSpecs = () => {
     if (!product) return []
-    switch (product.category) {
-
-      case "Phones":
-        return [
-          { label: "Ekran Ölçüsü",      value: product.screenSize },
-          { label: "Yaddaş",            value: product.storage },
-          { label: "RAM",               value: product.ram },
-          { label: "Ön Kamera",         value: product.frontCamera },
-          { label: "Arxa Kamera",       value: product.backCamera },
-          { label: "Batareya",          value: product.battery },
-          { label: "Prosessor",         value: product.processor },
-          { label: "Əməliyyat Sistemi", value: product.operatingSystem },
-        ].filter(s => s.value)
-
-      case "Laptops":
-        return [
-          { label: "Ekran Ölçüsü",      value: product.screenSize },
-          { label: "Yaddaş",            value: product.storage },
-          { label: "RAM",               value: product.ram },
-          { label: "GPU",               value: product.gpu },
-          { label: "Kamera",            value: product.camera },
-          { label: "Prosessor",         value: product.processor },
-          { label: "Batareya Ömrü",     value: product.batteryLife },
-          { label: "Əməliyyat Sistemi", value: product.operatingSystem },
-        ].filter(s => s.value)
-
-      case "Cameras":
-        return [
-          { label: "Həlledicilik",           value: product.resolution },
-          { label: "Optik Zoom",             value: product.opticalZoom },
-          { label: "Sensor Tipi",            value: product.sensorType },
-          { label: "Görüntü Sabitləşdirmə", value: product.imageStabilization },
-        ].filter(s => s.value)
-
-      case "Headphones":
-        return [
-          { label: "Bağlantı",         value: product.connectivity },
-          { label: "Batareya Ömrü",    value: product.batteryLife },
-          { label: "Səs İzolyasiyası", value: product.noiseCancellation },
-        ].filter(s => s.value)
-
-      case "Console":
-        return [
-          { label: "CPU",                      value: product.cpu },
-          { label: "GPU",                      value: product.gpu },
-          { label: "Yaddaş",                   value: product.storage },
-          { label: "RAM",                      value: product.memory },
-          { label: "Dəstəklənən Həlledicilik", value: product.supportedResolution },
-          { label: "Bağlantı",                 value: product.connectivity },
-          { label: "Controller",               value: product.controllerIncluded ? "Daxildir" : null },
-        ].filter(s => s.value)
-
-      case "iPad":
-        return [
-          { label: "Ekran Ölçüsü",      value: product.ipadScreenSize || product.screenSize },
-          { label: "Yaddaş",            value: product.ipadStorage || product.storage },
-          { label: "RAM",               value: product.ipadRam || product.ram },
-          { label: "Prosessor",         value: product.ipadProcessor || product.processor },
-          { label: "Batareya",          value: product.ipadBattery || product.battery },
-          { label: "Əməliyyat Sistemi", value: product.ipadOperatingSystem || product.operatingSystem },
-          { label: "Kamera",            value: product.ipadCamera || product.camera },
-          { label: "Cellular",          value: product.cellular ? "Bəli" : null },
-        ].filter(s => s.value)
-
-      case "WomenClothing":
-      case "MenClothing":
-      case "KidsClothing":
-        return [
-          { label: "Ölçü",        value: product.size },
-          { label: "Rəng",        value: product.color },
-          { label: "Material",    value: product.material },
-          { label: "Brend",       value: product.brand },
-          { label: "Mövsüm",      value: product.season },
-          { label: "Yaş Aralığı", value: product.ageRange },
-          { label: "Cins",        value: product.gender },
-        ].filter(s => s.value)
-
-      case "HomeAppliances":
-        return [
-          { label: "Brend",         value: product.brand },
-          { label: "Güc İstehlakı", value: product.powerConsumption },
-          { label: "Zəmanət",       value: product.warranty },
-          { label: "Ölçülər",       value: product.dimensions },
-          { label: "Rəng",          value: product.color },
-        ].filter(s => s.value)
-
-      case "HomeAndGarden":
-        return [
-          { label: "Material",      value: product.material },
-          { label: "Ölçülər",       value: product.dimensions },
-          { label: "Rəng",          value: product.color },
-          { label: "Brend",         value: product.brand },
-          { label: "İstifadə Yeri", value: product.indoorOutdoor },
-        ].filter(s => s.value)
-
-      case "Beauty":
-        return [
-          { label: "Brend",               value: product.brand },
-          { label: "Dəri Tipi",           value: product.skinType },
-          { label: "Həcm",                value: product.volume },
-          { label: "Tərkib",              value: product.ingredients },
-          { label: "Son İstifadə Tarixi", value: product.expiryDate },
-        ].filter(s => s.value)
-
-      case "Sports":
-        return [
-          { label: "Brend",    value: product.brand },
-          { label: "Material", value: product.material },
-          { label: "Çəki",     value: product.weight },
-          { label: "Uyğundur", value: product.suitableFor },
-          { label: "Rəng",     value: product.color },
-        ].filter(s => s.value)
-
-      case "Automotive":
-        return [
-          { label: "Brend",          value: product.brand },
-          { label: "Uyğun Modellər", value: product.compatibleModels },
-          { label: "Material",       value: product.material },
-          { label: "Zəmanət",        value: product.warranty },
-          { label: "Rəng",           value: product.color },
-        ].filter(s => s.value)
-
-      default:
-        return []
+    const p = product
+    const map = {
+      Phones:        [["Ekran","screenSize"],["Yaddaş","storage"],["RAM","ram"],["Ön Kamera","frontCamera"],["Arxa Kamera","backCamera"],["Batareya","battery"],["Prosessor","processor"],["OS","operatingSystem"]],
+      Laptops:       [["Ekran","screenSize"],["Yaddaş","storage"],["RAM","ram"],["GPU","gpu"],["Kamera","camera"],["Prosessor","processor"],["Batareya Ömrü","batteryLife"],["OS","operatingSystem"]],
+      Cameras:       [["Həlledicilik","resolution"],["Optik Zoom","opticalZoom"],["Sensor","sensorType"],["Sabitləşdirmə","imageStabilization"]],
+      Headphones:    [["Bağlantı","connectivity"],["Batareya","batteryLife"],["Səs İzolyasiyası","noiseCancellation"]],
+      Console:       [["CPU","cpu"],["GPU","gpu"],["Yaddaş","storage"],["RAM","memory"],["Həlledicilik","supportedResolution"],["Bağlantı","connectivity"]],
+      iPad:          [["Ekran","screenSize"],["Yaddaş","storage"],["RAM","ram"],["Prosessor","processor"],["Batareya","battery"],["OS","operatingSystem"],["Kamera","camera"]],
+      WomenClothing: [["Ölçü","size"],["Rəng","color"],["Material","material"],["Brend","brand"],["Mövsüm","season"]],
+      MenClothing:   [["Ölçü","size"],["Rəng","color"],["Material","material"],["Brend","brand"],["Mövsüm","season"]],
+      KidsClothing:  [["Ölçü","size"],["Rəng","color"],["Material","material"],["Brend","brand"],["Yaş","ageRange"],["Cins","gender"]],
+      HomeAppliances:[["Brend","brand"],["Güc","powerConsumption"],["Zəmanət","warranty"],["Ölçülər","dimensions"],["Rəng","color"]],
+      HomeAndGarden: [["Material","material"],["Ölçülər","dimensions"],["Rəng","color"],["Brend","brand"],["İstifadə","indoorOutdoor"]],
+      Beauty:        [["Brend","brand"],["Dəri Tipi","skinType"],["Həcm","volume"],["Tərkib","ingredients"],["Son Tarix","expiryDate"]],
+      Sports:        [["Brend","brand"],["Material","material"],["Çəki","weight"],["Uyğundur","suitableFor"],["Rəng","color"]],
+      Automotive:    [["Brend","brand"],["Uyğun Modellər","compatibleModels"],["Material","material"],["Zəmanət","warranty"],["Rəng","color"]],
     }
+    const rows  = map[p.category] || []
+    const extra = []
+    if (p.category === "Console" && p.controllerIncluded) extra.push(["Controller","Daxildir"])
+    if (p.category === "iPad"    && p.cellular)           extra.push(["Cellular","Bəli"])
+    return [...rows.map(([l,k]) => p[k] ? [l,p[k]] : null).filter(Boolean), ...extra]
   }
 
-  const handleReviewSubmit = async (e) => {
+  const handleReviewSubmit = async e => {
     e.preventDefault()
-    if (reviewRating === 0) { toast.error("Zəhmət olmasa ulduz seçin"); return }
+    if (!reviewRating) { toast.error("Zəhmət olmasa ulduz seçin"); return }
     try {
-      const response = await createOrUpdateReview({
-        productId: product._id,
-        rating: reviewRating,
-        comment: reviewComment,
+      const res = await createOrUpdateReview({
+        productId:product._id, rating:reviewRating, comment:reviewComment,
       }).unwrap()
-      toast.success(response.message || "Rəy göndərildi")
-      setReviewRating(0)
-      setReviewComment("")
-    } catch (err) {
-      toast.error(err.data?.message || "Xəta baş verdi")
-    }
+      toast.success(res.message || "Rəy göndərildi")
+      setReviewRating(0); setReviewComment("")
+    } catch (err) { toast.error(err.data?.message || "Xəta baş verdi") }
   }
 
+  /* Loading / Error */
   if (isLoading)
     return (
-      <div className="flex justify-center items-center h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-red-500"></div>
+      <div style={{ display:"flex", justifyContent:"center", alignItems:"center", height:"100vh", background:t.bg }}>
+        <div style={{
+          width:44, height:44, borderRadius:"50%",
+          border:`4px solid ${t.redMid}`, borderTopColor:t.red,
+          animation:"_spin 0.75s linear infinite",
+        }}/>
+        <style>{`@keyframes _spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     )
 
   if (error)
     return (
-      <div className="flex flex-col items-center justify-center h-screen text-red-600 gap-4">
-        <AlertCircle size={48} />
-        <p className="text-xl font-semibold">Xəta: {error.message}</p>
+      <div style={{ display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",gap:12,color:t.red }}>
+        <AlertCircle size={48}/>
+        <p style={{ fontSize:18,fontWeight:600 }}>Xəta: {error.message}</p>
       </div>
     )
 
-  const originalPrice = product?.originalPrice || Math.round((product?.price || 0) * 1.25)
-  const discountPercent = product?.discount || 25
-
-  /* ─────────────────────────────────────────────
-     RIGHT / DETAIL PANEL — shared between mobile & desktop
-  ───────────────────────────────────────────── */
-  const DetailPanel = () => (
-    <div className="flex flex-col">
-      {/* Flash Sale */}
-      <div className="flex items-center justify-between bg-red-50 border border-red-100 rounded-xl px-4 py-3 mb-5">
-        <div className="flex items-center gap-2">
-          <Zap size={14} className="text-red-500 fill-red-500" />
-          <span className="text-red-500 font-bold text-xs tracking-widest uppercase">Flash Sale</span>
-        </div>
-        <span className="text-red-500 font-mono font-bold tracking-widest text-sm">{formatTime(timeLeft)}</span>
-      </div>
-
-      {/* Price */}
-      <div className="flex items-end gap-3 mb-2">
-        <span className="text-3xl font-extrabold text-gray-900">₼{product?.price}</span>
-        <span className="text-lg text-gray-400 line-through mb-0.5">₼{originalPrice}</span>
-        <span className="mb-0.5 bg-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg">
-          -{discountPercent}% ENDİRİM
-        </span>
-      </div>
-
-      {/* Name */}
-      <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 leading-snug">
-        {product?.name}
-      </h1>
-
-      {/* Store row */}
-      <div className="flex items-center justify-between mb-5 pb-5 border-b border-gray-100">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center">
-            <Store size={16} className="text-gray-500" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-800">Elite Store</p>
-            <div className="flex items-center gap-1">
-              <Star size={11} fill="#f59e0b" className="text-amber-400" />
-              <span className="text-xs text-gray-500">4.8 (1k rəy)</span>
-            </div>
-          </div>
-        </div>
-        <button className="text-xs font-semibold text-red-500 border border-red-400 px-3 py-1.5 rounded-xl hover:bg-red-50 transition-colors">
-          Mağazaya bax
-        </button>
-      </div>
-
-      {/* Quantity + Cart + Fav */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className="flex items-center bg-gray-100 rounded-xl overflow-hidden">
-          <button
-            onClick={() => setQuantity(q => Math.max(1, q - 1))}
-            className="w-10 h-11 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
-          >
-            <Minus size={15} />
-          </button>
-          <span className="w-8 text-center font-bold text-gray-800 text-sm">{quantity}</span>
-          <button
-            onClick={() => setQuantity(q => q + 1)}
-            className="w-10 h-11 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
-          >
-            <Plus size={15} />
-          </button>
-        </div>
-
-        <button
-          onClick={handleAddToCart}
-          className="flex-1 bg-red-500 hover:bg-red-600 active:scale-95 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-red-200 text-sm"
-        >
-          <ShoppingCart size={18} />
-          Səbətə əlavə et
-        </button>
-
-        <button
-          onClick={handleAddToFavorites}
-          className="w-11 h-11 border-2 border-gray-200 rounded-xl flex items-center justify-center text-gray-500 hover:border-red-300 hover:text-red-500 hover:bg-red-50 transition-all"
-        >
-          <Heart size={18} />
-        </button>
-      </div>
-
-      {/* Stock */}
-      <div className={`text-sm font-medium flex items-center gap-1.5 mb-4 ${product?.stock > 0 ? 'text-green-600' : 'text-red-500'}`}>
-        {product?.stock > 0
-          ? <><CheckCircle size={14} /> Stokda var ({product?.stock} ədəd)</>
-          : <><AlertCircle size={14} /> Stokda yoxdur</>
-        }
-      </div>
-
-      {/* Description */}
-      <div className="mb-5 border-t border-gray-100 pt-4">
-        <p className={`text-gray-500 leading-relaxed text-sm ${!descExpanded ? "line-clamp-3" : ""}`}>
-          {product?.description || "Məhsul haqqında məlumat yoxdur."}
-        </p>
-        <button
-          onClick={() => setDescExpanded(v => !v)}
-          className="flex items-center gap-1 text-red-500 text-xs font-semibold mt-2"
-        >
-          {descExpanded ? "Daha az" : "Daha çox oxu"}
-          <ChevronDown size={12} className={`transition-transform ${descExpanded ? "rotate-180" : ""}`} />
-        </button>
-      </div>
-
-      {/* Specs */}
-      {getSpecs().length > 0 && (
-        <div>
-          <h3 className="text-sm font-bold text-gray-900 mb-3">Texniki Göstəricilər</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 text-sm">
-            {getSpecs().map((spec, index) => (
-              <div key={index} className="flex justify-between py-2 border-b border-gray-100 last:border-0">
-                <span className="text-gray-400 text-xs">{spec.label}</span>
-                <span className="font-semibold text-gray-800 text-xs text-right">{spec.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-
-  /* ─────────────────────────────────────────────
-     REVIEWS SECTION — shared
-  ───────────────────────────────────────────── */
-  const ReviewsSection = () => (
-    <div className="mt-8 grid lg:grid-cols-3 gap-6">
-      {/* Review form */}
-      <div className="lg:col-span-1">
-        <div className="bg-white p-5 rounded-2xl shadow-lg sticky top-6">
-          <h3 className="text-base font-bold text-gray-900 mb-4">Rəy Bildirin</h3>
-          <form onSubmit={handleReviewSubmit}>
-            <div className="mb-4">
-              <label className="block text-xs font-medium text-gray-600 mb-2">Qiymətləndirmə</label>
-              <StarRatings
-                rating={reviewRating}
-                changeRating={setReviewRating}
-                numberOfStars={5}
-                starRatedColor="#EF4444"
-                starHoverColor="#EF4444"
-                starDimension="22px"
-                starSpacing="3px"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-xs font-medium text-gray-600 mb-2">Şərhiniz</label>
-              <textarea
-                value={reviewComment}
-                onChange={(e) => setReviewComment(e.target.value)}
-                placeholder="Məhsul haqqında fikirləriniz..."
-                className="w-full p-3 rounded-xl bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-400 transition-all resize-none h-28 text-sm"
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-red-500 hover:bg-red-600 active:scale-95 text-white py-2.5 rounded-xl font-bold transition-all shadow-md shadow-red-100 text-sm"
-            >
-              Rəyi Göndər
-            </button>
-          </form>
-        </div>
-      </div>
-
-      {/* Existing reviews */}
-      <div className="lg:col-span-2 space-y-4">
-        <div className="flex items-center gap-3">
-          <h3 className="text-xl font-bold text-gray-900">İstifadəçi Rəyləri</h3>
-          <div className="flex items-center gap-1 bg-amber-50 border border-amber-100 px-3 py-1 rounded-full">
-            <Star size={13} fill="#f59e0b" className="text-amber-400" />
-            <span className="text-xs font-bold text-amber-700">{product?.ratings?.toFixed(1) || "0.0"}</span>
-          </div>
-        </div>
-
-        {reviewsLoading ? (
-          <div className="text-center py-10 text-gray-400 text-sm">Yüklənir...</div>
-        ) : reviewsError ? (
-          <div className="text-red-500 text-sm">Rəyləri gətirmək mümkün olmadı.</div>
-        ) : reviewsData?.reviews?.length > 0 ? (
-          <div className="grid gap-3">
-            {reviewsData.reviews.map((review, idx) => (
-              <div key={idx} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex gap-3">
-                <div className="shrink-0">
-                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-400">
-                    <User size={18} />
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-gray-900 text-sm">İstifadəçi</span>
-                    <div className="flex">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          size={12}
-                          fill={i < review.rating ? "#f59e0b" : "none"}
-                          className={i < review.rating ? "text-amber-400" : "text-gray-300"}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-gray-500 text-sm leading-relaxed">{review.comment}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="bg-white p-8 rounded-2xl border border-dashed border-gray-200 text-center text-gray-400">
-            <p className="text-sm">Bu məhsul üçün hələ heç kim rəy yazmayıb. İlk siz olun!</p>
-          </div>
-        )}
-      </div>
-    </div>
-  )
+  const origPrice = product?.originalPrice || Math.round((product?.price||0)*1.25)
+  const discount  = product?.discount || 25
+  const inStock   = product?.stock > 0
+  const lowStock  = inStock && product.stock <= 10
+  const specs     = getSpecs()
 
   return (
-    <section className="bg-gray-100 min-h-screen font-sans text-gray-800">
-      <Toaster position="top-center" />
+    <div style={{ background:t.bg, minHeight:"100vh", fontFamily:"'Segoe UI',system-ui,sans-serif" }}>
+      <Toaster position="top-center" toastOptions={{ style:{ fontSize:13, borderRadius:8 }}}/>
 
-      {/* ══════════════════════════════════════
-          MOBILE LAYOUT  (< lg)
-      ══════════════════════════════════════ */}
-      <div className="lg:hidden">
-        {/* Hero image area — full bleed with beige bg */}
-        <div className="relative bg-[#f5ede3]" style={{ paddingBottom: "100%" }}>
-          {/* Top bar */}
-          <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 pt-10 pb-4">
-            <button
-              onClick={() => window.history.back()}
-              className="w-9 h-9 bg-white/80 backdrop-blur rounded-full flex items-center justify-center shadow"
-            >
-              <ArrowLeft size={18} className="text-gray-700" />
-            </button>
-            <div className="flex items-center gap-2">
-              <button className="w-9 h-9 bg-white/80 backdrop-blur rounded-full flex items-center justify-center shadow">
-                <Share2 size={16} className="text-gray-700" />
-              </button>
-              <button
-                onClick={handleAddToFavorites}
-                className="w-9 h-9 bg-white/80 backdrop-blur rounded-full flex items-center justify-center shadow"
-              >
-                <Heart size={16} className="text-gray-700" />
-              </button>
-            </div>
-          </div>
+      {/* ── Üst bar ── */}
+      <div style={{ background:t.white, borderBottom:`1px solid ${t.border}`, padding:"10px 20px" }}>
+        <button
+          onClick={()=>window.history.back()}
+          style={{
+            display:"flex", alignItems:"center", gap:6,
+            background:"none", border:"none", cursor:"pointer",
+            fontSize:13, color:t.red, fontWeight:600,
+          }}
+        >
+          <ArrowLeft size={15}/> Geri
+        </button>
+      </div>
 
-          {/* Product image */}
-          <div className="absolute inset-0 flex items-center justify-center group">
-            <img
-              src={productImageUrl}
-              alt={product?.name}
-              className="w-3/4 h-3/4 object-contain drop-shadow-2xl transition-transform duration-500 group-hover:scale-105"
-            />
-            {productImages.length > 1 && (
-              <>
-                <button
-                  onClick={() => handleImageNavigation("prev")}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur text-gray-800 p-1.5 rounded-full shadow-lg"
-                >
-                  <ChevronLeft size={20} />
+      <div style={{ maxWidth:1200, margin:"0 auto", padding:"16px 16px 48px" }}>
+
+        {/* ── Əsas məhsul kartı ── */}
+        <div style={{
+          background:t.white, borderRadius:12,
+          border:`1px solid ${t.border}`,
+          boxShadow:t.shadowCard, overflow:"hidden",
+        }}>
+          <div className="pd-grid" style={{
+            display:"grid",
+            gridTemplateColumns:"minmax(280px,2fr) minmax(320px,3fr)",
+            gap:0,
+          }}>
+
+            {/* ════ SOL — Şəkillər ════ */}
+            <div style={{
+              padding:"24px 20px",
+              borderRight:`1px solid ${t.border}`,
+              position:"sticky", top:0, height:"fit-content",
+            }}>
+
+              {/* Əsas şəkil */}
+              <div style={{
+                position:"relative", background:"#FAFAFA",
+                border:`1px solid ${t.border}`, borderRadius:10,
+                aspectRatio:"1/1", overflow:"hidden",
+              }}>
+                {/* Endirim badge */}
+                <div style={{
+                  position:"absolute", top:12, left:12, zIndex:2,
+                  background:t.red, color:"#fff",
+                  fontSize:12, fontWeight:800, padding:"3px 9px",
+                  borderRadius:5, letterSpacing:0.3,
+                }}>
+                  -{discount}%
+                </div>
+
+                {/* Favori */}
+                <button onClick={handleFav} style={{
+                  position:"absolute", top:12, right:12, zIndex:2,
+                  width:36, height:36, borderRadius:"50%",
+                  background:isFaved ? t.redLight : t.white,
+                  border:`1.5px solid ${isFaved ? t.red : t.border}`,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  cursor:"pointer", boxShadow:t.shadow, transition:"all 0.18s",
+                }}>
+                  <Heart size={17} fill={isFaved?t.red:"none"} color={isFaved?t.red:t.textMid}/>
                 </button>
-                <button
-                  onClick={() => handleImageNavigation("next")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur text-gray-800 p-1.5 rounded-full shadow-lg"
-                >
-                  <ChevronRight size={20} />
-                </button>
-              </>
-            )}
-          </div>
 
-          {/* Dot indicators */}
-          {productImages.length > 1 && (
-            <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5">
-              {productImages.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentImageIndex(index)}
-                  className={`h-1.5 rounded-full transition-all ${
-                    currentImageIndex === index ? "w-5 bg-red-500" : "w-1.5 bg-gray-300"
-                  }`}
+                <img
+                  src={imgUrl} alt={product?.name}
+                  style={{
+                    width:"100%", height:"100%", objectFit:"contain",
+                    padding:20, transition:"transform 0.3s",
+                  }}
+                  onMouseEnter={e=>e.currentTarget.style.transform="scale(1.05)"}
+                  onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}
                 />
+
+                {/* Naviqasiya oxları */}
+                {imgs.length > 1 && ["prev","next"].map(dir=>(
+                  <button key={dir} onClick={()=>navImg(dir)} style={{
+                    position:"absolute", top:"50%",
+                    [dir==="prev"?"left":"right"]:10,
+                    transform:"translateY(-50%)",
+                    width:32, height:32, borderRadius:"50%",
+                    background:"rgba(255,255,255,0.93)",
+                    border:`1px solid ${t.border}`,
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    cursor:"pointer", boxShadow:t.shadow,
+                  }}>
+                    {dir==="prev"
+                      ? <ChevronLeft  size={16} color={t.textDark}/>
+                      : <ChevronRight size={16} color={t.textDark}/>}
+                  </button>
+                ))}
+              </div>
+
+              {/* Thumbnail-lər */}
+              {imgs.length > 1 && (
+                <div style={{ display:"flex", gap:7, marginTop:10, overflowX:"auto", paddingBottom:4 }}>
+                  {imgs.map((img,i)=>(
+                    <button key={i} onClick={()=>setCurrentImg(i)} style={{
+                      width:58, height:58, borderRadius:7, overflow:"hidden",
+                      border:`2px solid ${i===currentImg ? t.red : t.border}`,
+                      cursor:"pointer", background:t.white, padding:4, flexShrink:0,
+                      boxShadow:i===currentImg ? `0 0 0 2px ${t.redBorder}` : "none",
+                      transition:"all 0.15s",
+                    }}>
+                      <img src={img.url} alt="" style={{ width:"100%",height:"100%",objectFit:"contain" }}/>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Paylaş */}
+              <button style={{
+                display:"flex", alignItems:"center", gap:5, marginTop:14,
+                background:"none", border:"none", cursor:"pointer",
+                fontSize:12, color:t.textLight,
+              }}>
+                <Share2 size={13}/> Paylaş
+              </button>
+            </div>
+
+            {/* ════ SAĞ — Məlumatlar ════ */}
+            <div style={{ padding:"24px 28px" }}>
+
+              {/* Başlıq */}
+              <h1 style={{
+                fontSize:20, fontWeight:600, color:t.textDark,
+                lineHeight:1.45, margin:"0 0 10px",
+              }}>
+                {product?.name}
+              </h1>
+
+              {/* Reytinq */}
+              <div style={{
+                display:"flex", alignItems:"center", gap:8,
+                margin:"0 0 14px", flexWrap:"wrap",
+              }}>
+                <div style={{ display:"flex", gap:1 }}>
+                  {[1,2,3,4,5].map(i=>(
+                    <Star key={i} size={14}
+                      fill={i<=Math.round(product?.ratings||0)?t.star:"#DDD"}
+                      color={i<=Math.round(product?.ratings||0)?t.star:"#DDD"}
+                    />
+                  ))}
+                </div>
+                <span style={{ fontSize:14, color:t.red, fontWeight:600 }}>
+                  {product?.ratings?.toFixed(1)||"0.0"}
+                </span>
+                <span style={{ fontSize:13, color:t.textLight }}>({totalRev} rəy)</span>
+                <span style={{ width:1, height:14, background:t.borderMid }}/>
+                <GreenBadge><BadgeCheck size={10}/> Doğrulanmış Satıcı</GreenBadge>
+              </div>
+
+              <Divider/>
+
+              {/* Qiymət bloku */}
+              <div style={{
+                background:t.redLight, border:`1px solid ${t.redBorder}`,
+                borderRadius:10, padding:"14px 16px", marginBottom:14,
+              }}>
+                {/* Flash sale sayacı */}
+                <div style={{
+                  display:"flex", alignItems:"center", gap:8, marginBottom:12,
+                  background:t.red, borderRadius:6, padding:"6px 10px",
+                }}>
+                  <Zap size={13} fill="white" color="white"/>
+                  <span style={{ color:"#fff", fontSize:11, fontWeight:800, letterSpacing:0.8 }}>
+                    FLASH SALE
+                  </span>
+                  <div style={{
+                    marginLeft:"auto",
+                    background:"rgba(0,0,0,0.22)",
+                    borderRadius:4, padding:"2px 8px",
+                    display:"flex", alignItems:"center", gap:5,
+                  }}>
+                    <Clock size={11} color="white"/>
+                    <span style={{ color:"#fff", fontFamily:"monospace", fontSize:13, fontWeight:700 }}>
+                      {fmt(timeLeft)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Qiymət */}
+                <div style={{ display:"flex", alignItems:"flex-end", gap:10, flexWrap:"wrap" }}>
+                  <span style={{ fontSize:34, fontWeight:700, color:t.priceRed, lineHeight:1 }}>
+                    ₼{product?.price}
+                  </span>
+                  <div style={{ marginBottom:4 }}>
+                    <span style={{ fontSize:15, color:t.textLight, textDecoration:"line-through" }}>
+                      ₼{origPrice}
+                    </span>
+                    <span style={{
+                      marginLeft:7, fontSize:12, fontWeight:700, color:t.white,
+                      background:t.red, padding:"2px 7px", borderRadius:4,
+                    }}>
+                      ₼{(origPrice-(product?.price||0)).toFixed(2)} qənaət
+                    </span>
+                  </div>
+                </div>
+                <div style={{ fontSize:11, color:t.textLight, marginTop:5 }}>
+                  Vergi daxil • Çatdırılma pulsuz
+                </div>
+              </div>
+
+              {/* Stok — yaşıl / qırmızı */}
+              <div style={{
+                display:"flex", alignItems:"center", gap:8,
+                padding:"9px 14px", borderRadius:8, marginBottom:14,
+                background:inStock ? t.greenLight : t.redLight,
+                border:`1px solid ${inStock ? t.greenBorder : t.redBorder}`,
+              }}>
+                {inStock
+                  ? <>
+                      <CheckCircle size={16} color={t.green}/>
+                      <span style={{ fontSize:14, fontWeight:600, color:t.green }}>Stokda var</span>
+                      {lowStock && (
+                        <span style={{ fontSize:12, color:t.red, fontWeight:500 }}>
+                          — yalnız {product.stock} ədəd qalıb!
+                        </span>
+                      )}
+                    </>
+                  : <>
+                      <AlertCircle size={16} color={t.red}/>
+                      <span style={{ fontSize:14, fontWeight:600, color:t.red }}>Stokda yoxdur</span>
+                    </>
+                }
+              </div>
+
+              {/* Satıcı */}
+              <div style={{
+                display:"flex", alignItems:"center", justifyContent:"space-between",
+                padding:"12px 14px", background:t.white,
+                border:`1px solid ${t.border}`, borderRadius:10, marginBottom:14,
+              }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <div style={{
+                    width:40, height:40, borderRadius:9,
+                    background:`linear-gradient(135deg,${t.red} 0%,${t.redDark} 100%)`,
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                  }}>
+                    <Store size={19} color="white"/>
+                  </div>
+                  <div>
+                    <div style={{ fontSize:11, color:t.textLight, marginBottom:1 }}>Satıcı</div>
+                    {/* sellerName — bazadan gələn string: product.seller */}
+                    <div style={{ fontSize:15, fontWeight:700, color:t.textDark }}>{sellerName}</div>
+                    <div style={{ display:"flex", alignItems:"center", gap:2, marginTop:2 }}>
+                      {[1,2,3,4,5].map(i=>(
+                        <Star key={i} size={10} fill={t.star} color={t.star}/>
+                      ))}
+                      <span style={{ fontSize:11, color:t.textLight, marginLeft:3 }}>4.8</span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  style={{
+                    fontSize:12, fontWeight:600, color:t.red,
+                    border:`1.5px solid ${t.red}`, borderRadius:7,
+                    padding:"7px 12px", background:t.redLight,
+                    cursor:"pointer", transition:"all 0.15s", whiteSpace:"nowrap",
+                  }}
+                  onMouseEnter={e=>{e.currentTarget.style.background=t.red; e.currentTarget.style.color="#fff"}}
+                  onMouseLeave={e=>{e.currentTarget.style.background=t.redLight; e.currentTarget.style.color=t.red}}
+                >
+                  Mağazaya bax
+                </button>
+              </div>
+
+              {/* Miqdar + Səbətə əlavə et */}
+              <div style={{ display:"flex", gap:10, marginBottom:10, flexWrap:"wrap" }}>
+
+                {/* Miqdar seçici */}
+                <div style={{
+                  display:"flex", alignItems:"center",
+                  border:`1.5px solid ${t.border}`, borderRadius:8,
+                  background:t.white, overflow:"hidden",
+                }}>
+                  <button
+                    onClick={()=>setQuantity(q=>Math.max(1,q-1))}
+                    style={{
+                      width:38, height:46,
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      background:"none", border:"none", cursor:"pointer",
+                      color:quantity<=1?t.textLight:t.red,
+                      borderRight:`1px solid ${t.border}`,
+                    }}
+                  ><Minus size={14}/></button>
+                  <span style={{ width:46, textAlign:"center", fontSize:15, fontWeight:700, color:t.textDark }}>
+                    {quantity}
+                  </span>
+                  <button
+                    onClick={()=>setQuantity(q=>q+1)}
+                    style={{
+                      width:38, height:46,
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      background:"none", border:"none", cursor:"pointer",
+                      color:t.red, borderLeft:`1px solid ${t.border}`,
+                    }}
+                  ><Plus size={14}/></button>
+                </div>
+
+                {/* Səbət — qırmızı əsas düymə */}
+                <button
+                  onClick={handleAddToCart}
+                  style={{
+                    flex:1, minWidth:160, height:46,
+                    background: addedToCart
+                      ? `linear-gradient(180deg,${t.green},#028040)`
+                      : `linear-gradient(180deg,${t.red} 0%,${t.redDark} 100%)`,
+                    border:`1px solid ${addedToCart ? "#028040" : t.redDark}`,
+                    borderRadius:8, cursor:"pointer",
+                    fontSize:14, fontWeight:700, color:"#fff",
+                    display:"flex", alignItems:"center", justifyContent:"center", gap:7,
+                    boxShadow:`0 2px 8px rgba(232,25,44,0.25)`,
+                    transition:"all 0.25s",
+                  }}
+                  onMouseEnter={e=>!addedToCart&&(e.currentTarget.style.filter="brightness(1.08)")}
+                  onMouseLeave={e=>e.currentTarget.style.filter="brightness(1)"}
+                >
+                  {addedToCart
+                    ? <><CheckCircle size={16}/> Əlavə edildi</>
+                    : <><ShoppingCart size={17}/> Səbətə əlavə et</>
+                  }
+                </button>
+              </div>
+
+              {/* İndi al — ağ/qırmızı outlined düymə */}
+              <button style={{
+                width:"100%", height:46,
+                background:t.white,
+                border:`2px solid ${t.red}`,
+                borderRadius:8, cursor:"pointer",
+                fontSize:14, fontWeight:700, color:t.red,
+                display:"flex", alignItems:"center", justifyContent:"center", gap:7,
+                marginBottom:16,
+                transition:"all 0.18s",
+              }}
+                onMouseEnter={e=>{e.currentTarget.style.background=t.red; e.currentTarget.style.color="#fff"}}
+                onMouseLeave={e=>{e.currentTarget.style.background=t.white; e.currentTarget.style.color=t.red}}
+              >
+                İndi Al
+              </button>
+
+              {/* Güvən ikonlar */}
+              <div style={{ display:"flex", gap:8, marginBottom:16, flexWrap:"wrap" }}>
+                <TrustItem icon={<Truck     size={18}/>} label="Pulsuz Çatdırılma" sub="24–48 saat"/>
+                <TrustItem icon={<RotateCcw size={18}/>} label="30 Gün İadə"       sub="Problemsiz"/>
+                <TrustItem icon={<Shield    size={18}/>} label="Rəsmi Zəmanət"     sub="Orijinal məhsul"/>
+              </div>
+
+              <Divider/>
+
+              {/* Açıqlama */}
+              <div style={{ marginBottom:16 }}>
+                <h3 style={{ fontSize:15, fontWeight:700, color:t.textDark, marginBottom:8 }}>
+                  Məhsul Haqqında
+                </h3>
+                <div style={{
+                  fontSize:14, color:t.textMid, lineHeight:1.72,
+                  overflow:"hidden",
+                  display:"-webkit-box",
+                  WebkitLineClamp:descExpanded?"unset":4,
+                  WebkitBoxOrient:"vertical",
+                }}>
+                  {product?.description || "Məhsul haqqında məlumat yoxdur."}
+                </div>
+                <button
+                  onClick={()=>setDescExpanded(v=>!v)}
+                  style={{
+                    display:"flex", alignItems:"center", gap:4, marginTop:7,
+                    background:"none", border:"none", cursor:"pointer",
+                    fontSize:13, fontWeight:600, color:t.red,
+                  }}
+                >
+                  {descExpanded?"Daha az":"Daha çox oxu"}
+                  <ChevronDown size={13} style={{
+                    transform:descExpanded?"rotate(180deg)":"rotate(0)",
+                    transition:"0.2s",
+                  }}/>
+                </button>
+              </div>
+
+              {/* Texniki göstəricilər */}
+              {specs.length > 0 && (
+                <div>
+                  <h3 style={{ fontSize:15, fontWeight:700, color:t.textDark, marginBottom:10 }}>
+                    Texniki Göstəricilər
+                  </h3>
+                  <table style={{
+                    width:"100%", borderCollapse:"collapse",
+                    fontSize:13, borderRadius:8, overflow:"hidden",
+                  }}>
+                    <tbody>
+                      {specs.map(([label,val],i)=>(
+                        <tr key={i} style={{ background:i%2===0?"#FFF5F5":t.white }}>
+                          <td style={{
+                            padding:"9px 14px", color:t.textMid, fontWeight:500,
+                            width:"42%", borderBottom:`1px solid ${t.border}`,
+                          }}>
+                            {label}
+                          </td>
+                          <td style={{
+                            padding:"9px 14px", color:t.textDark, fontWeight:600,
+                            borderBottom:`1px solid ${t.border}`,
+                          }}>
+                            {val}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ════ Rəylər kartı ════ */}
+        <div style={{
+          background:t.white, borderRadius:12, border:`1px solid ${t.border}`,
+          boxShadow:t.shadowCard, padding:"28px 32px", marginTop:16,
+        }}>
+          <h2 style={{ fontSize:20, fontWeight:700, color:t.textDark, marginBottom:22 }}>
+            Müştəri Rəyləri
+          </h2>
+
+          {/* Statistika + Form */}
+          <div style={{ display:"flex", gap:32, flexWrap:"wrap", marginBottom:24 }}>
+
+            {/* Ümumi reytinq */}
+            <div style={{ textAlign:"center", minWidth:90 }}>
+              <div style={{ fontSize:54, fontWeight:800, color:t.red, lineHeight:1 }}>
+                {product?.ratings?.toFixed(1)||"0.0"}
+              </div>
+              <div style={{ display:"flex", justifyContent:"center", gap:2, margin:"6px 0" }}>
+                {[1,2,3,4,5].map(i=>(
+                  <Star key={i} size={15}
+                    fill={i<=Math.round(product?.ratings||0)?t.star:"#DDD"}
+                    color={i<=Math.round(product?.ratings||0)?t.star:"#DDD"}
+                  />
+                ))}
+              </div>
+              <div style={{ fontSize:12, color:t.textLight }}>{totalRev} rəy</div>
+            </div>
+
+            {/* Bar chart */}
+            <div style={{ flex:1, minWidth:160, paddingTop:4 }}>
+              {ratingDist.map(({v,count})=>(
+                <RatingBar key={v} value={v} count={count} total={totalRev}/>
               ))}
+            </div>
+
+            {/* Rəy formu */}
+            <div style={{
+              flex:1, minWidth:230,
+              background:t.redLight, border:`1px solid ${t.redBorder}`,
+              borderRadius:10, padding:16,
+            }}>
+              <h4 style={{ fontSize:14, fontWeight:700, color:t.textDark, marginBottom:12 }}>
+                Rəy Bildirin
+              </h4>
+              <form onSubmit={handleReviewSubmit}>
+                <div style={{ marginBottom:10 }}>
+                  <StarRatings
+                    rating={reviewRating}
+                    changeRating={setReviewRating}
+                    numberOfStars={5}
+                    starRatedColor={t.star}
+                    starHoverColor={t.star}
+                    starDimension="24px"
+                    starSpacing="2px"
+                  />
+                </div>
+                <textarea
+                  value={reviewComment}
+                  onChange={e=>setReviewComment(e.target.value)}
+                  placeholder="Məhsul haqqında fikirləriniz..."
+                  style={{
+                    width:"100%", height:88, padding:"8px 10px",
+                    border:`1px solid ${t.redBorder}`, borderRadius:8,
+                    fontSize:13, color:t.textDark, resize:"none",
+                    outline:"none", background:t.white,
+                    boxSizing:"border-box", fontFamily:"inherit",
+                    transition:"border-color 0.15s",
+                  }}
+                  onFocus={e=>e.target.style.borderColor=t.red}
+                  onBlur={e=>e.target.style.borderColor=t.redBorder}
+                />
+                <button type="submit" style={{
+                  marginTop:8, width:"100%", padding:"9px 0",
+                  background:`linear-gradient(180deg,${t.red} 0%,${t.redDark} 100%)`,
+                  border:`1px solid ${t.redDark}`,
+                  borderRadius:8, fontSize:13, fontWeight:700,
+                  color:"#fff", cursor:"pointer",
+                  transition:"filter 0.15s",
+                  boxShadow:`0 2px 8px rgba(232,25,44,0.20)`,
+                }}
+                  onMouseEnter={e=>e.currentTarget.style.filter="brightness(1.08)"}
+                  onMouseLeave={e=>e.currentTarget.style.filter="brightness(1)"}
+                >
+                  Rəyi Göndər
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <Divider/>
+
+          {/* Rəy siyahısı */}
+          {reviewsLoading ? (
+            <div style={{ textAlign:"center", padding:"30px 0", color:t.textLight, fontSize:14 }}>
+              Yüklənir...
+            </div>
+          ) : reviewsError ? (
+            <div style={{ color:t.red, fontSize:14 }}>Rəyləri gətirmək mümkün olmadı.</div>
+          ) : reviews.length > 0 ? (
+            <div>
+              {reviews.map((review,idx)=>(
+                <div key={idx} style={{
+                  padding:"18px 0",
+                  borderBottom:idx < reviews.length-1 ? `1px solid ${t.border}` : "none",
+                }}>
+                  <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                    <div style={{
+                      width:40, height:40, borderRadius:"50%", flexShrink:0,
+                      background:t.redMid,
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                    }}>
+                      <User size={18} color={t.red}/>
+                    </div>
+                    <div style={{ flex:1 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:5 }}>
+                        {/* review.name — controller: name: req.user.name */}
+                        <span style={{ fontSize:14, fontWeight:700, color:t.textDark }}>
+                          {review.name || "İstifadəçi"}
+                        </span>
+                        <GreenBadge><CheckCircle size={10}/> Doğrulanmış alış</GreenBadge>
+                      </div>
+                      <div style={{ display:"flex", gap:2, marginBottom:7 }}>
+                        {[1,2,3,4,5].map(i=>(
+                          <Star key={i} size={13}
+                            fill={i<=review.rating?t.star:"#DDD"}
+                            color={i<=review.rating?t.star:"#DDD"}
+                          />
+                        ))}
+                      </div>
+                      <p style={{ fontSize:14, color:t.textMid, lineHeight:1.65, margin:0 }}>
+                        {review.comment}
+                      </p>
+                      <button style={{
+                        display:"flex", alignItems:"center", gap:5, marginTop:8,
+                        background:"none", border:`1px solid ${t.border}`,
+                        borderRadius:6, padding:"4px 10px",
+                        cursor:"pointer", fontSize:12, color:t.textLight,
+                        transition:"all 0.15s",
+                      }}
+                        onMouseEnter={e=>e.currentTarget.style.borderColor=t.borderMid}
+                        onMouseLeave={e=>e.currentTarget.style.borderColor=t.border}
+                      >
+                        <ThumbsUp size={12}/> Faydalıdır
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{
+              textAlign:"center", padding:"36px 0",
+              border:`1.5px dashed ${t.redBorder}`, borderRadius:10,
+              background:t.redLight,
+            }}>
+              <Package size={34} color={t.redBorder} style={{ marginBottom:10 }}/>
+              <p style={{ fontSize:14, color:t.textLight, margin:0 }}>
+                Bu məhsul üçün hələ heç kim rəy yazmayıb. İlk siz olun!
+              </p>
             </div>
           )}
         </div>
-
-        {/* White card content */}
-        <div className="bg-white rounded-t-3xl -mt-5 relative z-10 px-5 pt-6 pb-8">
-          <DetailPanel />
-        </div>
-
-        {/* Reviews */}
-        <div className="px-4 pb-10">
-          <ReviewsSection />
-        </div>
       </div>
 
-      {/* ══════════════════════════════════════
-          DESKTOP LAYOUT  (lg+)
-          Left: sticky image column
-          Right: scrollable detail + reviews
-      ══════════════════════════════════════ */}
-      <div className="hidden lg:flex min-h-screen">
-
-        {/* ── LEFT: Sticky image panel ── */}
-        <div className="w-[42%] xl:w-[40%] shrink-0 sticky top-0 h-screen bg-[#f5ede3] flex flex-col justify-center p-8 xl:p-12">
-          <div className="relative aspect-square rounded-2xl overflow-hidden flex items-center justify-center group">
-            <img
-              src={productImageUrl}
-              alt={product?.name}
-              className="w-4/5 h-4/5 object-contain drop-shadow-2xl transition-transform duration-500 group-hover:scale-105"
-            />
-            {productImages.length > 1 && (
-              <>
-                <button
-                  onClick={() => handleImageNavigation("prev")}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur hover:bg-white text-gray-800 p-2 rounded-full shadow-lg transition-all opacity-0 group-hover:opacity-100"
-                >
-                  <ChevronLeft size={24} />
-                </button>
-                <button
-                  onClick={() => handleImageNavigation("next")}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur hover:bg-white text-gray-800 p-2 rounded-full shadow-lg transition-all opacity-0 group-hover:opacity-100"
-                >
-                  <ChevronRight size={24} />
-                </button>
-              </>
-            )}
-          </div>
-
-          {productImages.length > 1 && (
-            <div className="flex justify-center mt-6 gap-3 overflow-x-auto py-2">
-              {productImages.map((image, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentImageIndex(index)}
-                  className={`w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${
-                    currentImageIndex === index
-                      ? "border-red-500 ring-2 ring-red-200 ring-offset-2"
-                      : "border-transparent opacity-60 hover:opacity-100"
-                  }`}
-                >
-                  <img src={image.url} alt={`Thumb ${index}`} className="w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* ── RIGHT: Scrollable content ── */}
-        <div className="flex-1 overflow-y-auto bg-gray-100">
-          <div className="p-8 xl:p-12">
-
-            {/* Detail card */}
-            <div className="bg-white rounded-3xl shadow-xl p-8 xl:p-10 mb-8">
-              <DetailPanel />
-            </div>
-
-            {/* Reviews */}
-            <ReviewsSection />
-
-            <div className="h-10" />
-          </div>
-        </div>
-      </div>
-    </section>
+      {/* Responsive */}
+      <style>{`
+        @media (max-width: 768px) {
+          .pd-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .pd-grid > *:first-child {
+            border-right: none !important;
+            border-bottom: 1px solid #E8E8E8 !important;
+            position: static !important;
+          }
+        }
+      `}</style>
+    </div>
   )
 }
 

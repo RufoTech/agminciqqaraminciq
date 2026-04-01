@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE = "http://localhost:3010/commerce/mehsullar/commission";
+const BASE = "https://amdulraxim-production.up.railway.app/commerce/mehsullar/commission";
 
 export const fetchSellerBalance = (sellerId) =>
   axios.get(`${BASE}/balance/${encodeURIComponent(sellerId)}`, {

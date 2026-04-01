@@ -5,7 +5,7 @@
   "description": "Bu e-commerce ticaret sayti olacaq",
   "main": "app.js",
   "scripts": {
-    "start": "node --watch app.js",
+    "start": "node app.js",
     "dev": "NODE_ENV=DEVELOPMENT nodemon app.js",
     "prod": "NODE_ENV=PRODUCTION nodemon app.js",
     "seed": "node seeder/seeder.js"

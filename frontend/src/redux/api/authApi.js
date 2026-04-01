@@ -3,7 +3,7 @@ import { setIsAuthenticated, setUser, logout } from "../features/userSlice.js";
 
 export const authApi = createApi({
     reducerPath: "authApi",
-    baseQuery: fetchBaseQuery({ baseUrl: "/commerce/mehsullar", credentials: "include" }),
+    baseQuery: fetchBaseQuery({ baseUrl: "https://amdulraxim-production.up.railway.app/commerce/mehsullar", credentials: "include" }),
     endpoints: (builder) => ({
 
         // ── Qeydiyyat ──

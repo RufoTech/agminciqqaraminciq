@@ -49,8 +49,11 @@ export const connectDatabase = () => {
     // Bu ayrım sayəsində developer öz kompüterindəki bazanı
     // təsadüfən məhv etmir, real məlumatları pozmur.
     // ============================================================
-    if (process.env.NODE_ENV === "DEVELOPMENT") DB_URI = process.env.LOCAL_URI;
-    if (process.env.NODE_ENV === "PRODUCTION")  DB_URI = process.env.DB_URI;
+    if (process.env.NODE_ENV === "DEVELOPMENT") {
+        DB_URI = process.env.LOCAL_URI || process.env.DB_URI;
+    } else {
+        DB_URI = process.env.DB_URI; // Default to production DB
+    }
 
 
     // ============================================================

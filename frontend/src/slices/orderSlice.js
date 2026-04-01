@@ -3,7 +3,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
-const BASE_URL = "http://localhost:3010/commerce/mehsullar";
+const BASE_URL = "https://amdulraxim-production.up.railway.app/commerce/mehsullar";
 
 
 // ===================== SİFARİŞ YARAT =====================

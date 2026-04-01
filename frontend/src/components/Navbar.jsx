@@ -12,106 +12,117 @@ import {
   Monitor, Shirt, Flower2, Dumbbell, Car, Grid3X3,
   Sparkles, Baby, SlidersHorizontal, ArrowUpDown,
   Star, ChevronRight, Package, Bell,
-  BookOpen, Cpu, Headphones, Watch, Gamepad2,
+  BookOpen, Cpu, Watch, Gamepad2,
   Sofa, Footprints, PawPrint,
 } from "lucide-react"
 
-import {
-  fetchNotifications,
-  fetchUnreadCount,
-  markNotificationRead,
-  markAllNotificationsRead,
-  deleteNotification as deleteNotif,
-} from "../slices/notificationSlice"
+import { fetchUnreadCount } from "../slices/notificationSlice"
 
 /* ─────────────────────────────────────────────
-   BRENDEX LOGO — şəkil əsaslı B + RENDEX mətni
-   Bütün ekran ölçülərində işləyir
-
-   variant="color"  → qırmızı REND + qara EX (desktop)
-   variant="white"  → ağ RENDEX (sidebar)
-   variant="mobile" → kiçik ölçü (mobil üstbar)
+   YENİ LOGO SVG — B hərfi + səbət ikonu
 ───────────────────────────────────────────── */
-
-const LOGO_IMG = "https://res.cloudinary.com/duhguwli1/image/upload/v1773422859/Gemini_Generated_Image_5qaubk5qaubk5qau_tlnjyg.png"
-
-/* Desktop navbar loqosu */
-const BrendexLogoFull = ({ iconSize = 34 }) => (
-  <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-    <img
-      src={LOGO_IMG}
-      alt="B"
-      width={iconSize}
-      height={iconSize}
-      style={{ display: "block", flexShrink: 0, objectFit: "contain" }}
+const BCartIcon = ({ size = 36 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 64 64"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    style={{ display: "block", flexShrink: 0 }}
+  >
+    {/* B hərfi */}
+    <path
+      d="M6 6 L6 58 L34 58 Q52 58 52 46 Q52 38 42 35 Q50 31 50 22 Q50 6 32 6 Z
+         M16 14 L30 14 Q40 14 40 22 Q40 30 30 30 L16 30 Z
+         M16 38 L32 38 Q44 38 44 46 Q44 54 32 54 L16 54 Z"
+      fill="#E8192C"
     />
+    {/* Səbət gövdəsi */}
+    <path d="M22 42 L24 28 L46 28 L42 42 Z" fill="white" opacity="0.9" />
+    {/* Orta xətt */}
+    <line x1="24" y1="35" x2="44" y2="35" stroke="#b8001e" strokeWidth="1.5" />
+    {/* Sol təkər */}
+    <circle cx="28" cy="46" r="3.5" fill="#b8001e" />
+    <circle cx="28" cy="46" r="1.5" fill="white" />
+    {/* Sağ təkər */}
+    <circle cx="39" cy="46" r="3.5" fill="#b8001e" />
+    <circle cx="39" cy="46" r="1.5" fill="white" />
+  </svg>
+)
+
+const SidebarBCartIcon = ({ size = 32 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 64 64"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    style={{ display: "block", flexShrink: 0 }}
+  >
+    {/* B hərfi — ağ */}
+    <path
+      d="M6 6 L6 58 L34 58 Q52 58 52 46 Q52 38 42 35 Q50 31 50 22 Q50 6 32 6 Z
+         M16 14 L30 14 Q40 14 40 22 Q40 30 30 30 L16 30 Z
+         M16 38 L32 38 Q44 38 44 46 Q44 54 32 54 L16 54 Z"
+      fill="rgba(255,255,255,0.88)"
+    />
+    {/* Səbət gövdəsi */}
+    <path d="M22 42 L24 28 L46 28 L42 42 Z" fill="rgba(232,25,44,0.85)" opacity="0.9" />
+    {/* Orta xətt */}
+    <line x1="24" y1="35" x2="44" y2="35" stroke="white" strokeWidth="1.5" opacity="0.7" />
+    {/* Sol təkər */}
+    <circle cx="28" cy="46" r="3.5" fill="#E8192C" />
+    <circle cx="28" cy="46" r="1.5" fill="white" />
+    {/* Sağ təkər */}
+    <circle cx="39" cy="46" r="3.5" fill="#E8192C" />
+    <circle cx="39" cy="46" r="1.5" fill="white" />
+  </svg>
+)
+
+/* ─────────────────────────────────────────────
+   LOGO KOMPONENTLƏRİ
+───────────────────────────────────────────── */
+const BrendexLogoFull = ({ iconSize = 36 }) => (
+  <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+    <BCartIcon size={iconSize} />
     <span style={{
-      fontFamily: "'Sora','Segoe UI',sans-serif",
-      fontWeight: 900,
-      fontSize: Math.round(iconSize * 0.97),
-      letterSpacing: "-0.03em",
-      lineHeight: 1,
-      display: "flex",
-      alignItems: "center",
+      fontFamily:"'Sora','Segoe UI',sans-serif", fontWeight:900,
+      fontSize:Math.round(iconSize * 0.92), letterSpacing:"-0.03em",
+      lineHeight:1, display:"flex", alignItems:"center",
     }}>
-      <span style={{ color: "#E8192C" }}>REND</span>
-      <span style={{ color: "#1a1a1a" }}>EX</span>
+      <span style={{ color:"#E8192C" }}>REND</span>
+      <span style={{ color:"#1a1a1a" }}>EX</span>
     </span>
   </div>
 )
 
-/* Mobil üstbar loqosu */
 const MobileLogoFull = () => (
-  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-    <img
-      src={LOGO_IMG}
-      alt="B"
-      width={30}
-      height={30}
-      style={{ display: "block", flexShrink: 0, objectFit: "contain" }}
-    />
+  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+    <BCartIcon size={32} />
     <span style={{
-      fontFamily: "'Sora','Segoe UI',sans-serif",
-      fontWeight: 900,
-      fontSize: 18,
-      letterSpacing: "-0.02em",
-      lineHeight: 1,
-      display: "flex",
-      alignItems: "center",
+      fontFamily:"'Sora','Segoe UI',sans-serif", fontWeight:900,
+      fontSize:17, letterSpacing:"-0.02em", lineHeight:1,
+      display:"flex", alignItems:"center",
     }}>
-      <span style={{ color: "#E8192C" }}>REND</span>
-      <span style={{ color: "#1a1a1a" }}>EX</span>
+      <span style={{ color:"#E8192C" }}>REND</span>
+      <span style={{ color:"#1a1a1a" }}>EX</span>
     </span>
   </div>
 )
 
-/* Sidebar loqosu — ağ mətn */
 const SidebarLogo = () => (
-  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-    <img
-      src={LOGO_IMG}
-      alt="B"
-      width={30}
-      height={30}
-      style={{ display: "block", flexShrink: 0, objectFit: "contain", filter: "brightness(0) invert(1)" }}
-    />
+  <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+    <SidebarBCartIcon size={32} />
     <div>
       <span style={{
-        color: "white",
-        fontWeight: 900,
-        fontSize: 15,
-        fontFamily: "'Sora',sans-serif",
-        letterSpacing: "-0.02em",
-        display: "block",
-        lineHeight: 1.1,
+        color:"white", fontWeight:900, fontSize:15,
+        fontFamily:"'Sora',sans-serif", letterSpacing:"-0.02em",
+        display:"block", lineHeight:1.1,
       }}>RENDEX</span>
       <span style={{
-        color: "rgba(255,255,255,0.55)",
-        fontSize: 8,
-        letterSpacing: "0.14em",
-        textTransform: "uppercase",
-        fontFamily: "'Sora',sans-serif",
-        display: "block",
+        color:"rgba(255,255,255,0.55)", fontSize:8,
+        letterSpacing:"0.14em", textTransform:"uppercase",
+        fontFamily:"'Sora',sans-serif", display:"block",
       }}>Online Store</span>
     </div>
   </div>
@@ -173,8 +184,6 @@ const C = {
   dark:        "#1c1c1e",
   mid:         "#6b7280",
   light:       "#d1d5db",
-  bg:          "#ffffff",
-  surface:     "#fafafa",
 }
 
 /* ─────────────────────────────────────────────
@@ -182,7 +191,7 @@ const C = {
 ───────────────────────────────────────────── */
 function LanguageSwitcher() {
   const dispatch    = useDispatch()
-  const currentLang = useSelector((state) => state.language.currentLang)
+  const currentLang = useSelector((s) => s.language.currentLang)
   const [isOpen, setIsOpen] = useState(false)
   const ref = useRef(null)
 
@@ -196,24 +205,20 @@ function LanguageSwitcher() {
 
   return (
     <div ref={ref} style={{ position:"relative", display:"inline-block" }}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        style={{
-          height:36, padding:"0 12px", borderRadius:99,
-          border:`1.5px solid ${isOpen ? C.rose200 : "#e5e7eb"}`,
-          background: isOpen ? C.rose50 : "#fff",
-          cursor:"pointer", display:"flex", alignItems:"center", gap:6,
-          transition:"all .18s", fontFamily:"'Sora',sans-serif",
-          fontSize:12, fontWeight:700,
-          color: isOpen ? C.primary : C.mid,
-          boxShadow: isOpen ? `0 0 0 3px ${C.rose100}` : "none",
-        }}
-      >
+      <button onClick={() => setIsOpen(!isOpen)} style={{
+        height:36, padding:"0 12px", borderRadius:99,
+        border:`1.5px solid ${isOpen ? C.rose200 : "#e5e7eb"}`,
+        background: isOpen ? C.rose50 : "#fff",
+        cursor:"pointer", display:"flex", alignItems:"center", gap:6,
+        transition:"all .18s", fontFamily:"'Sora',sans-serif",
+        fontSize:12, fontWeight:700,
+        color: isOpen ? C.primary : C.mid,
+        boxShadow: isOpen ? `0 0 0 3px ${C.rose100}` : "none",
+      }}>
         <span style={{ fontSize:16 }}>{active.flag}</span>
         <span>{active.short}</span>
         <ChevronDown size={11} style={{ transition:"transform .2s", transform: isOpen ? "rotate(180deg)":"rotate(0)" }} />
       </button>
-
       {isOpen && (
         <ul style={{
           position:"absolute", top:"calc(100% + 8px)", right:0,
@@ -226,18 +231,15 @@ function LanguageSwitcher() {
           {languages.map((lang) => {
             const isAct = currentLang === lang.code
             return (
-              <li
-                key={lang.code}
-                onClick={() => { dispatch(setLanguage(lang.code)); setIsOpen(false) }}
-                style={{
-                  display:"flex", alignItems:"center", gap:9,
-                  padding:"8px 12px", cursor:"pointer", borderRadius:10,
-                  fontFamily:"'Sora',sans-serif", fontSize:13,
-                  fontWeight: isAct ? 700 : 500,
-                  color: isAct ? C.primary : C.dark,
-                  background: isAct ? C.rose50 : "transparent",
-                  transition:"background .12s",
-                }}
+              <li key={lang.code} onClick={() => { dispatch(setLanguage(lang.code)); setIsOpen(false) }} style={{
+                display:"flex", alignItems:"center", gap:9,
+                padding:"8px 12px", cursor:"pointer", borderRadius:10,
+                fontFamily:"'Sora',sans-serif", fontSize:13,
+                fontWeight: isAct ? 700 : 500,
+                color: isAct ? C.primary : C.dark,
+                background: isAct ? C.rose50 : "transparent",
+                transition:"background .12s",
+              }}
                 onMouseEnter={e => { if (!isAct) e.currentTarget.style.background="#f9fafb" }}
                 onMouseLeave={e => { if (!isAct) e.currentTarget.style.background="transparent" }}
               >
@@ -257,15 +259,14 @@ function LanguageSwitcher() {
    NOTIFICATION BELL
 ───────────────────────────────────────────── */
 function NotificationBell({ isMobile = false }) {
-  const { t }      = useTranslation()
-  const dispatch   = useDispatch()
-  const { items, unreadCount, loading } = useSelector((s) => s.notifications)
-  const [isOpen, setIsOpen] = useState(false)
-  const [shake,  setShake]  = useState(false)
-  const ref       = useRef(null)
-  const prevCount = useRef(unreadCount)
+  const { t }           = useTranslation()
+  const dispatch        = useDispatch()
+  const navigate        = useNavigate()
+  const { unreadCount } = useSelector((s) => s.notifications)
+  const [shake, setShake] = useState(false)
+  const prevCount         = useRef(unreadCount)
 
-  useEffect(() => { dispatch(fetchNotifications()) }, [dispatch])
+  useEffect(() => { dispatch(fetchUnreadCount()) }, [dispatch])
   useEffect(() => {
     const id = setInterval(() => dispatch(fetchUnreadCount()), 30000)
     return () => clearInterval(id)
@@ -274,110 +275,24 @@ function NotificationBell({ isMobile = false }) {
     if (unreadCount > prevCount.current) { setShake(true); setTimeout(() => setShake(false), 600) }
     prevCount.current = unreadCount
   }, [unreadCount])
-  useEffect(() => {
-    const fn = (e) => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false) }
-    document.addEventListener("mousedown", fn)
-    return () => document.removeEventListener("mousedown", fn)
-  }, [])
-
-  const markAllRead  = () => dispatch(markAllNotificationsRead())
-  const markRead     = (e, id) => { e.stopPropagation(); dispatch(markNotificationRead(id)) }
-  const handleDelete = (e, id) => { e.stopPropagation(); dispatch(deleteNotif(id)) }
-
-  const typeIcon = (type) => {
-    const map = {
-      order_status:      { emoji:"📦", bg:"#e0f2fe", color:"#0369a1" },
-      new_order:         { emoji:"🛒", bg:C.rose50,  color:C.primary  },
-      low_stock:         { emoji:"⚠️", bg:"#fef9c3", color:"#854d0e" },
-      out_of_stock:      { emoji:"❌", bg:"#fee2e2", color:"#b91c1c" },
-      cart_added:        { emoji:"🛍️", bg:"#d1fae5", color:"#065f46" },
-      favorite_price:    { emoji:"🎉", bg:C.rose50,  color:C.primary  },
-      commission_earned: { emoji:"💵", bg:"#d1fae5", color:"#065f46" },
-      new_user:          { emoji:"👤", bg:"#ede9fe", color:"#6d28d9" },
-    }
-    return map[type] || { emoji:"🔔", bg:"#f3f4f6", color:C.mid }
-  }
-
-  const timeAgo = (dateStr) => {
-    const diff = Date.now() - new Date(dateStr).getTime()
-    const m = Math.floor(diff/60000), h = Math.floor(diff/3600000), d = Math.floor(diff/86400000)
-    if (m < 1)  return "indi"
-    if (m < 60) return `${m} dəq əvvəl`
-    if (h < 24) return `${h} saat əvvəl`
-    return `${d} gün əvvəl`
-  }
-
-  const btnStyle = isMobile
-    ? { position:"relative", display:"flex", alignItems:"center", justifyContent:"center", width:40, height:40, borderRadius:13, border:"none", background:"transparent", cursor:"pointer", color:"#6b7280" }
-    : { position:"relative", width:40, height:40, borderRadius:13, border:"none", background:"transparent", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#6b7280", transition:"all .2s ease" }
 
   return (
-    <div ref={ref} style={{ position:"relative" }}>
-      <button
-        className={`${isMobile ? "" : "bib"} ${shake ? "nb-shake" : ""}`}
-        style={btnStyle}
-        onClick={() => { setIsOpen((p) => { if (!p) dispatch(fetchNotifications()); return !p }) }}
-        title={t("navbar.notifications") || "Bildirişlər"}
-      >
-        <Bell size={18} />
-        {unreadCount > 0 && (
-          <span className="bbd nb-badge-anim" style={{ top:2, right:2 }}>
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
-      </button>
-
-      {isOpen && (
-        <div style={{ position:"absolute", top:"calc(100% + 8px)", right: isMobile ? -60 : 0, background:"#fff", borderRadius:20, boxShadow:"0 20px 60px rgba(0,0,0,0.12)", border:"1.5px solid #f3f4f6", width:320, zIndex:200, overflow:"hidden", animation:"nbUserDrop 0.18s ease" }}>
-          <div style={{ padding:"14px 16px 10px", display:"flex", alignItems:"center", justifyContent:"space-between", borderBottom:"1px solid #f3f4f6" }}>
-            <div>
-              <span style={{ fontSize:14, fontWeight:800, color:C.dark, fontFamily:"'Sora',sans-serif" }}>Bildirişlər</span>
-              {unreadCount > 0 && <span style={{ marginLeft:8, background:C.primary, color:"#fff", fontSize:10, fontWeight:700, padding:"2px 7px", borderRadius:99, fontFamily:"'Sora',sans-serif" }}>{unreadCount} yeni</span>}
-            </div>
-            {unreadCount > 0 && <button onClick={markAllRead} style={{ fontSize:11, color:C.primary, fontWeight:600, background:"none", border:"none", cursor:"pointer", fontFamily:"'Sora',sans-serif" }}>Hamısını oxu</button>}
-          </div>
-          <div className="notif-list" style={{ maxHeight:340, overflowY:"auto" }}>
-            {loading && items.length === 0 ? (
-              <div style={{ padding:"32px 16px", textAlign:"center" }}>
-                <div style={{ width:22, height:22, border:`2px solid ${C.rose200}`, borderTopColor:C.primary, borderRadius:"50%", animation:"nbSpin 0.7s linear infinite", margin:"0 auto" }} />
-              </div>
-            ) : items.length === 0 ? (
-              <div style={{ padding:"32px 16px", textAlign:"center" }}>
-                <div style={{ fontSize:28, marginBottom:8 }}>🔔</div>
-                <p style={{ fontSize:13, color:C.mid, fontFamily:"'Sora',sans-serif" }}>Bildiriş yoxdur</p>
-              </div>
-            ) : items.map((n) => {
-              const ti = typeIcon(n.type)
-              return (
-                <div key={n._id} onClick={(e) => !n.isRead && markRead(e, n._id)}
-                  style={{ display:"flex", alignItems:"flex-start", gap:12, padding:"12px 16px", cursor:"pointer", transition:"background .12s", background: n.isRead ? "#fff" : C.rose50, borderBottom:"1px solid #f9fafb", position:"relative" }}
-                  onMouseEnter={e => e.currentTarget.style.background = n.isRead ? "#f9fafb" : "#fff0f1"}
-                  onMouseLeave={e => e.currentTarget.style.background = n.isRead ? "#fff" : C.rose50}
-                >
-                  <div style={{ width:36, height:36, borderRadius:11, background:ti.bg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0 }}>{ti.emoji}</div>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <p style={{ margin:0, fontSize:13, fontWeight: n.isRead ? 500 : 700, color:C.dark, fontFamily:"'Sora',sans-serif", lineHeight:1.4 }}>{n.title}</p>
-                    <p style={{ margin:"3px 0 0", fontSize:11, color:C.mid, fontFamily:"'Sora',sans-serif" }}>{n.message}</p>
-                    <p style={{ margin:"4px 0 0", fontSize:10, color:C.light, fontFamily:"'Sora',sans-serif" }}>{timeAgo(n.createdAt)}</p>
-                  </div>
-                  <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4, flexShrink:0 }}>
-                    <button onClick={(e) => handleDelete(e, n._id)}
-                      style={{ background:"none", border:"none", color:C.light, cursor:"pointer", fontSize:14, padding:"2px 4px", borderRadius:5, transition:"all .15s" }}
-                      onMouseEnter={e => { e.currentTarget.style.color=C.primary; e.currentTarget.style.background=C.rose50 }}
-                      onMouseLeave={e => { e.currentTarget.style.color=C.light;   e.currentTarget.style.background="none" }}
-                      title="Sil">✕</button>
-                    {!n.isRead && <div style={{ width:7, height:7, borderRadius:"50%", background:C.primary, marginTop:2 }} />}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-          <div style={{ padding:"10px 16px", borderTop:"1px solid #f3f4f6" }}>
-            <span style={{ fontSize:11, color:C.mid, fontFamily:"'Sora',sans-serif" }}>Cəmi {items.length} bildiriş</span>
-          </div>
-        </div>
+    <button
+      className={`${isMobile ? "" : "bib"} ${shake ? "nb-shake" : ""}`}
+      style={isMobile
+        ? { position:"relative", display:"flex", alignItems:"center", justifyContent:"center", width:40, height:40, borderRadius:13, border:"none", background:"transparent", cursor:"pointer", color:"#6b7280" }
+        : { position:"relative", width:40, height:40, borderRadius:13, border:"none", background:"transparent", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#6b7280", transition:"all .2s ease" }
+      }
+      onClick={() => navigate("/notifications")}
+      title={t("navbar.notifications") || "Bildirişlər"}
+    >
+      <Bell size={18} />
+      {unreadCount > 0 && (
+        <span className="bbd nb-badge-anim" style={{ top:2, right:2 }}>
+          {unreadCount > 9 ? "9+" : unreadCount}
+        </span>
       )}
-    </div>
+    </button>
   )
 }
 
@@ -434,9 +349,9 @@ function ProductCard({ product, onClose }) {
 ───────────────────────────────────────────── */
 function CategoryProductPanel({ cat, onClose, onCategoryNavigate }) {
   const { t } = useTranslation()
-  const [sortBy, setSortBy]       = useState("default")
+  const [sortBy, setSortBy]         = useState("default")
   const [priceRange, setPriceRange] = useState(null)
-  const [minRating, setMinRating] = useState(0)
+  const [minRating, setMinRating]   = useState(0)
   const [showFilters, setShowFilters] = useState(false)
 
   const slugCats = SLUG_TO_CATEGORIES[cat.slug] ?? []
@@ -456,7 +371,7 @@ function CategoryProductPanel({ cat, onClose, onCategoryNavigate }) {
     return l
   })()
 
-  const pct = priceRange!==null ? Math.round((priceRange/maxPrice)*100) : 100
+  const pct  = priceRange!==null ? Math.round((priceRange/maxPrice)*100) : 100
   const Icon = cat.icon
 
   const SORT_OPTIONS = [
@@ -503,14 +418,12 @@ function CategoryProductPanel({ cat, onClose, onCategoryNavigate }) {
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:7, flexShrink:0 }}>
             <div style={{ position:"relative" }}>
-              <select value={sortBy} onChange={e=>setSortBy(e.target.value)}
-                style={{ appearance:"none", padding:"7px 30px 7px 12px", borderRadius:12, border:`1.5px solid #e5e7eb`, background:"#fff", fontSize:12, fontWeight:600, color:C.mid, cursor:"pointer", fontFamily:"'Sora',sans-serif", outline:"none" }}>
+              <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{ appearance:"none", padding:"7px 30px 7px 12px", borderRadius:12, border:`1.5px solid #e5e7eb`, background:"#fff", fontSize:12, fontWeight:600, color:C.mid, cursor:"pointer", fontFamily:"'Sora',sans-serif", outline:"none" }}>
                 {SORT_OPTIONS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
               <ArrowUpDown size={11} color={C.light} style={{ position:"absolute", right:9, top:"50%", transform:"translateY(-50%)", pointerEvents:"none" }} />
             </div>
-            <button onClick={()=>setShowFilters(p=>!p)}
-              style={{ display:"flex", alignItems:"center", gap:5, padding:"7px 13px", borderRadius:12, border:`1.5px solid ${showFilters?C.primary:"#e5e7eb"}`, background:showFilters?C.rose50:"#fff", color:showFilters?C.primary:C.mid, fontSize:12, fontWeight:600, cursor:"pointer", transition:"all .15s" }}>
+            <button onClick={()=>setShowFilters(p=>!p)} style={{ display:"flex", alignItems:"center", gap:5, padding:"7px 13px", borderRadius:12, border:`1.5px solid ${showFilters?C.primary:"#e5e7eb"}`, background:showFilters?C.rose50:"#fff", color:showFilters?C.primary:C.mid, fontSize:12, fontWeight:600, cursor:"pointer", transition:"all .15s" }}>
               <SlidersHorizontal size={13}/> {t("search.filters")}
             </button>
             <button onClick={onClose} style={{ width:36, height:36, borderRadius:11, border:"none", background:"#f3f4f6", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
@@ -531,16 +444,14 @@ function CategoryProductPanel({ cat, onClose, onCategoryNavigate }) {
               <p style={{ margin:"0 0 8px", fontSize:10, fontWeight:700, color:C.mid, textTransform:"uppercase", letterSpacing:0.8 }}>{t("search.minRating")}</p>
               <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
                 {[0,3,3.5,4,4.5].map(r=>(
-                  <button key={r} onClick={()=>setMinRating(r)} className="cpch"
-                    style={{ border:`1.5px solid ${minRating===r?C.primary:"#e5e7eb"}`, background:minRating===r?C.rose50:"#fff", color:minRating===r?C.primary:C.mid }}>
+                  <button key={r} onClick={()=>setMinRating(r)} className="cpch" style={{ border:`1.5px solid ${minRating===r?C.primary:"#e5e7eb"}`, background:minRating===r?C.rose50:"#fff", color:minRating===r?C.primary:C.mid }}>
                     {r===0?t("search.all"):<><Star size={9} fill="#f59e0b" color="#f59e0b"/>{r}+</>}
                   </button>
                 ))}
               </div>
             </div>
             <div style={{ display:"flex", alignItems:"flex-end" }}>
-              <button onClick={()=>{setPriceRange(maxPrice);setMinRating(0);setSortBy("default")}}
-                style={{ padding:"7px 16px", borderRadius:12, border:"1.5px solid #e5e7eb", background:"#fff", color:C.mid, fontSize:12, fontWeight:600, cursor:"pointer" }}>
+              <button onClick={()=>{setPriceRange(maxPrice);setMinRating(0);setSortBy("default")}} style={{ padding:"7px 16px", borderRadius:12, border:"1.5px solid #e5e7eb", background:"#fff", color:C.mid, fontSize:12, fontWeight:600, cursor:"pointer" }}>
                 {t("search.reset")}
               </button>
             </div>
@@ -560,8 +471,7 @@ function CategoryProductPanel({ cat, onClose, onCategoryNavigate }) {
             <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:260, gap:12 }}>
               <span style={{ fontSize:40 }}>🔍</span>
               <p style={{ color:C.mid, fontSize:14, fontFamily:"'Sora',sans-serif" }}>{t("search.noResults")}</p>
-              <button onClick={()=>{setPriceRange(maxPrice);setMinRating(0)}}
-                style={{ padding:"10px 22px", borderRadius:12, border:"none", background:`linear-gradient(135deg,${C.primarySoft},${C.primary})`, color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer" }}>
+              <button onClick={()=>{setPriceRange(maxPrice);setMinRating(0)}} style={{ padding:"10px 22px", borderRadius:12, border:"none", background:`linear-gradient(135deg,${C.primarySoft},${C.primary})`, color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer" }}>
                 {t("search.reset")}
               </button>
             </div>
@@ -627,33 +537,33 @@ const Navbar = () => {
   const navigate  = useNavigate()
   const location  = useLocation()
 
-  const [searchQuery,     setSearchQuery]     = useState("")
-  const [showSearch,      setShowSearch]      = useState(false)
-  const [isMenuOpen,      setIsMenuOpen]      = useState(false)
-  const [isUserMenuOpen,  setIsUserMenuOpen]  = useState(false)
-  const [isCategoryOpen,  setIsCategoryOpen]  = useState(false)
-  const [scrolled,        setScrolled]        = useState(false)
-  const [activeCatPanel,  setActiveCatPanel]  = useState(null)
+  const [searchQuery,    setSearchQuery]    = useState("")
+  const [showSearch,     setShowSearch]     = useState(false)
+  const [isMenuOpen,     setIsMenuOpen]     = useState(false)
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false)
+  const [scrolled,       setScrolled]       = useState(false)
+  const [activeCatPanel, setActiveCatPanel] = useState(null)
 
   const catRef  = useRef(null)
   const userRef = useRef(null)
 
   const categories = [
-    { label:t("categories.electronics"),   sub:"12k+ məhsul",                icon:Monitor,   slug:"electronics", color:"#E8192C", bg:C.rose50    },
-    { label:t("categories.clothing"),      sub:t("categories.newCollection"), icon:Shirt,     slug:"clothing",    color:"#c0112a", bg:"#fce4e4"   },
-    { label:t("categories.homeAndGarden"), sub:t("categories.decor"),         icon:Flower2,   slug:"home",        color:"#2e7d32", bg:"#e8f5e9"   },
-    { label:t("categories.beauty"),        sub:t("categories.cosmetics"),     icon:Sparkles,  slug:"beauty",      color:"#db2777", bg:"#fdf2f8"   },
-    { label:t("categories.kids"),          sub:t("categories.toys"),          icon:Baby,      slug:"kids",        color:"#f57c00", bg:"#fff3e0"   },
-    { label:t("categories.sport"),         sub:t("categories.fitness"),       icon:Dumbbell,  slug:"sport",       color:"#E8192C", bg:C.rose50    },
-    { label:t("categories.automotive"),    sub:t("categories.accessories"),   icon:Car,       slug:"auto",        color:"#c0112a", bg:"#fce4e4"   },
-    { label:"Kitablar",                    sub:"Təhsil & inkişaf",            icon:BookOpen,  slug:"books",       color:"#7c3aed", bg:"#f5f3ff"   },
-    { label:"Texnologiya",                 sub:"Kompüter & aksesuarlar",      icon:Cpu,       slug:"electronics", color:"#0369a1", bg:"#e0f2fe"   },
-    { label:"Saatlar & Zərgərlik",         sub:"Premium seçimlər",            icon:Watch,     slug:"jewelry",     color:"#b45309", bg:"#fef3c7"   },
-    { label:"Oyunlar & Konsol",            sub:"Gaming dünyası",              icon:Gamepad2,  slug:"electronics", color:"#6d28d9", bg:"#ede9fe"   },
-    { label:"Mebel",                       sub:"Ev dizaynı",                  icon:Sofa,      slug:"home",        color:"#0f766e", bg:"#ccfbf1"   },
-    { label:"Ayaqqabı & Çantalar",         sub:"Moda & stil",                 icon:Footprints,slug:"shoes",       color:"#be185d", bg:"#fce7f3"   },
-    { label:"Ev Heyvanları",               sub:"Heyvan malları",              icon:PawPrint,  slug:"pets",        color:"#15803d", bg:"#dcfce7"   },
-    { label:t("categories.other"),         sub:t("categories.allCategories"), icon:Grid3X3,  slug:null,          color:"#6b7280", bg:"#f9fafb"   },
+    { label:t("categories.electronics"),   sub:"12k+ məhsul",                icon:Monitor,    slug:"electronics", color:"#E8192C", bg:C.rose50    },
+    { label:t("categories.clothing"),      sub:t("categories.newCollection"), icon:Shirt,      slug:"clothing",    color:"#c0112a", bg:"#fce4e4"   },
+    { label:t("categories.homeAndGarden"), sub:t("categories.decor"),         icon:Flower2,    slug:"home",        color:"#2e7d32", bg:"#e8f5e9"   },
+    { label:t("categories.beauty"),        sub:t("categories.cosmetics"),     icon:Sparkles,   slug:"beauty",      color:"#db2777", bg:"#fdf2f8"   },
+    { label:t("categories.kids"),          sub:t("categories.toys"),          icon:Baby,       slug:"kids",        color:"#f57c00", bg:"#fff3e0"   },
+    { label:t("categories.sport"),         sub:t("categories.fitness"),       icon:Dumbbell,   slug:"sport",       color:"#E8192C", bg:C.rose50    },
+    { label:t("categories.automotive"),    sub:t("categories.accessories"),   icon:Car,        slug:"auto",        color:"#c0112a", bg:"#fce4e4"   },
+    { label:"Kitablar",                    sub:"Təhsil & inkişaf",            icon:BookOpen,   slug:"books",       color:"#7c3aed", bg:"#f5f3ff"   },
+    { label:"Texnologiya",                 sub:"Kompüter & aksesuarlar",      icon:Cpu,        slug:"electronics", color:"#0369a1", bg:"#e0f2fe"   },
+    { label:"Saatlar & Zərgərlik",         sub:"Premium seçimlər",            icon:Watch,      slug:"jewelry",     color:"#b45309", bg:"#fef3c7"   },
+    { label:"Oyunlar & Konsol",            sub:"Gaming dünyası",              icon:Gamepad2,   slug:"electronics", color:"#6d28d9", bg:"#ede9fe"   },
+    { label:"Mebel",                       sub:"Ev dizaynı",                  icon:Sofa,       slug:"home",        color:"#0f766e", bg:"#ccfbf1"   },
+    { label:"Ayaqqabı & Çantalar",         sub:"Moda & stil",                 icon:Footprints, slug:"shoes",       color:"#be185d", bg:"#fce7f3"   },
+    { label:"Ev Heyvanları",               sub:"Heyvan malları",              icon:PawPrint,   slug:"pets",        color:"#15803d", bg:"#dcfce7"   },
+    { label:t("categories.other"),         sub:t("categories.allCategories"), icon:Grid3X3,    slug:null,          color:"#6b7280", bg:"#f9fafb"   },
   ]
 
   const isAdmin = user?.user?.role === "admin"
@@ -707,7 +617,7 @@ const Navbar = () => {
         * { box-sizing: border-box; }
 
         @keyframes nbSlideDown   { from{transform:translateY(-100%);opacity:0} to{transform:translateY(0);opacity:1} }
-        @keyframes nbLogoPop     { 0%{opacity:0;transform:scale(0.6)} 70%{opacity:1;transform:scale(1.05)} 100%{opacity:1;transform:scale(1)} }
+        @keyframes nbLogoPop     { 0%{opacity:0;transform:scale(0.6)} 70%{opacity:1;transform:scale(1.07)} 100%{opacity:1;transform:scale(1)} }
         @keyframes nbLinkFade    { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
         @keyframes nbActionSlide { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
         @keyframes nbBadgePop    { from{transform:scale(0)} to{transform:scale(1)} }
@@ -720,20 +630,22 @@ const Navbar = () => {
         @keyframes nbFd          { from{opacity:0} to{opacity:1} }
         @keyframes nbBd          { from{transform:scale(0)} to{transform:scale(1)} }
         @keyframes nbMobTopSlide { from{transform:translateY(-100%);opacity:0} to{transform:translateY(0);opacity:1} }
-        @keyframes nbSpin        { to{transform:rotate(360deg)} }
         @keyframes nb-shake      { 0%,100%{transform:rotate(0deg)} 20%{transform:rotate(-15deg)} 40%{transform:rotate(15deg)} 60%{transform:rotate(-10deg)} 80%{transform:rotate(8deg)} }
 
-        .nb-nav-wrap      { animation: nbSlideDown 0.55s cubic-bezier(0.34,1.10,0.64,1) both; }
-        .nb-logo-anim     { animation: nbLogoPop 0.65s cubic-bezier(0.34,1.56,0.64,1) 0.25s both; }
-        .nb-link-anim-1   { animation: nbLinkFade 0.45s ease 0.35s both; }
-        .nb-link-anim-2   { animation: nbLinkFade 0.45s ease 0.45s both; }
-        .nb-link-anim-3   { animation: nbLinkFade 0.45s ease 0.55s both; }
-        .nb-actions-anim  { animation: nbActionSlide 0.45s ease 0.50s both; }
-        .nb-mob-anim      { animation: nbMobRise 0.55s cubic-bezier(0.34,1.10,0.64,1) 0.40s both; }
-        .nb-mob-top-anim  { animation: nbMobTopSlide 0.45s cubic-bezier(0.34,1.10,0.64,1) 0.20s both; }
+        .nb-nav-wrap     { animation: nbSlideDown 0.55s cubic-bezier(0.34,1.10,0.64,1) both; }
+        .nb-logo-anim    { animation: nbLogoPop 0.65s cubic-bezier(0.34,1.56,0.64,1) 0.25s both; }
+        .nb-link-anim-1  { animation: nbLinkFade 0.45s ease 0.35s both; }
+        .nb-link-anim-2  { animation: nbLinkFade 0.45s ease 0.45s both; }
+        .nb-link-anim-3  { animation: nbLinkFade 0.45s ease 0.55s both; }
+        .nb-actions-anim { animation: nbActionSlide 0.45s ease 0.50s both; }
+        .nb-mob-anim     { animation: nbMobRise 0.55s cubic-bezier(0.34,1.10,0.64,1) 0.40s both; }
+        .nb-mob-top-anim { animation: nbMobTopSlide 0.45s cubic-bezier(0.34,1.10,0.64,1) 0.20s both; }
         .nb-cart-bounce-anim { animation: nbCartBounce 0.65s cubic-bezier(0.34,1.56,0.64,1) 0.80s both; }
-        .nb-badge-anim    { animation: nbBadgePop 0.35s cubic-bezier(0.34,1.56,0.64,1) 1.0s both; }
-        .nb-shake         { animation: nb-shake 0.6s ease; }
+        .nb-badge-anim   { animation: nbBadgePop 0.35s cubic-bezier(0.34,1.56,0.64,1) 1.0s both; }
+        .nb-shake        { animation: nb-shake 0.6s ease; }
+
+        .nb-logo-link { transition: transform 0.2s ease; display:inline-flex; align-items:center; text-decoration:none; }
+        .nb-logo-link:hover { transform: translateY(-1px); }
 
         .bnl { position:relative;font-size:14px;font-weight:600;color:#374151;text-decoration:none;padding:6px 2px;transition:color 0.2s;font-family:'Sora',sans-serif;background:none;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:5px;letter-spacing:-0.01em; }
         .bnl::after { content:'';position:absolute;bottom:-4px;left:0;width:0;height:2.5px;background:linear-gradient(90deg,${C.primarySoft},${C.primary});border-radius:2px;transition:width 0.28s cubic-bezier(0.34,1.56,0.64,1); }
@@ -763,11 +675,10 @@ const Navbar = () => {
         .bms { position:fixed;top:0;left:0;height:100%;width:308px;background:#fff;z-index:150;transform:translateX(-100%);transition:transform 0.32s cubic-bezier(0.4,0,0.2,1);overflow-y:auto;display:flex;flex-direction:column;box-shadow:8px 0 40px rgba(0,0,0,0.10);border-right:1.5px solid #f3f4f6; }
         .bms.open { transform:translateX(0); }
 
-        @media(max-width:768px)  { .dN{display:none!important} .mBN{display:flex!important} .mObTopBar{display:flex!important} }
-        @media(min-width:769px)  { .dN{display:block!important} .mBN{display:none!important} .mObTopBar{display:none!important} }
+        @media(max-width:768px)  { .nb-nav-wrap{display:none!important} .mBN{display:flex!important} .mObTopBar{display:flex!important} }
+        @media(min-width:769px)  { .nb-nav-wrap{display:block!important} .mBN{display:none!important} .mObTopBar{display:none!important} }
         @media(max-width:640px)  { .bso{padding-top:0!important;align-items:flex-end!important} .bsbx{border-radius:22px 22px 0 0!important;margin:0!important;max-width:100%!important} }
         .mob-bottom-nav { padding-bottom:env(safe-area-inset-bottom,0px); }
-
         .notif-list::-webkit-scrollbar{width:3px}
         .notif-list::-webkit-scrollbar-thumb{background:${C.rose200};border-radius:4px}
       `}</style>
@@ -776,9 +687,7 @@ const Navbar = () => {
         <CategoryProductPanel cat={activeCatPanel} onClose={()=>setActiveCatPanel(null)} onCategoryNavigate={handleCategoryNavigate}/>
       )}
 
-      {/* ══════════════════════════════════════════
-          AXTARIŞ MODALİ
-      ══════════════════════════════════════════ */}
+      {/* ══ AXTARIŞ MODALİ ══ */}
       {showSearch && (
         <div className="bso" onClick={()=>setShowSearch(false)}>
           <div className="bsbx" onClick={e=>e.stopPropagation()}>
@@ -809,13 +718,11 @@ const Navbar = () => {
         </div>
       )}
 
-      {/* ══════════════════════════════════════════
-          MOBİL ÜST BAR
-      ══════════════════════════════════════════ */}
+      {/* ══ MOBİL ÜST BAR ══ */}
       <div className="mObTopBar nb-mob-top-anim"
         style={{ display:"none", position:"sticky", top:0, zIndex:91, background: scrolled ? "rgba(255,255,255,0.97)" : "#fff", backdropFilter: scrolled ? "blur(20px)" : "none", borderBottom:"1px solid #f3f4f6", boxShadow: scrolled ? "0 4px 20px rgba(0,0,0,0.06)" : "none", transition:"all 0.3s ease", padding:"0 16px", height:56, alignItems:"center", justifyContent:"space-between", gap:8 }}
       >
-        <Link to="/" style={{ textDecoration:"none", display:"flex", alignItems:"center", flexShrink:0 }}>
+        <Link to="/" className="nb-logo-link">
           <MobileLogoFull />
         </Link>
         <div style={{ display:"flex", alignItems:"center", gap:2 }}>
@@ -840,20 +747,24 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* ══════════════════════════════════════════
-          DESKTOP NAVBAR
-      ══════════════════════════════════════════ */}
-      <nav className="nb-nav-wrap dN"
-        style={{ position:"sticky", top:0, zIndex:90, background: scrolled ? "rgba(255,255,255,0.96)" : "transparent", backdropFilter: scrolled ? "blur(20px)" : "none", borderBottom: scrolled ? "1px solid #f3f4f6" : "1px solid #f9fafb", boxShadow: scrolled ? "0 4px 28px rgba(0,0,0,0.06)" : "none", transition:"all 0.3s ease" }}
+      {/* ══ DESKTOP NAVBAR ══ */}
+      <nav
+        className="nb-nav-wrap"
+        style={{
+          position:"sticky", top:0, zIndex:90,
+          background: scrolled ? "rgba(255,255,255,0.96)" : "transparent",
+          backdropFilter: scrolled ? "blur(20px)" : "none",
+          borderBottom: scrolled ? "1px solid #f3f4f6" : "1px solid #f9fafb",
+          boxShadow: scrolled ? "0 4px 28px rgba(0,0,0,0.06)" : "none",
+          transition:"all 0.3s ease",
+        }}
       >
         <div style={{ maxWidth:1320, margin:"0 auto", padding:"0 24px", height:66, display:"flex", alignItems:"center", justifyContent:"space-between", gap:20 }}>
 
-          {/* ── LOQO ── */}
-          <Link to="/" className="nb-logo-anim" style={{ textDecoration:"none", flexShrink:0, display:"flex", alignItems:"center" }}>
-            <BrendexLogoFull iconSize={34} />
+          <Link to="/" className="nb-logo-anim nb-logo-link">
+            <BrendexLogoFull iconSize={36} />
           </Link>
 
-          {/* ── NAVİQASİYA LİNKLƏRİ ── */}
           <div style={{ display:"flex", alignItems:"center", gap:40, flex:1, justifyContent:"center" }}>
             <span className="nb-link-anim-1">
               <Link to="/home" className={`bnl ${isAct("/home")?"on":""}`}>{t("navbar.home")}</Link>
@@ -874,7 +785,6 @@ const Navbar = () => {
             </span>
           </div>
 
-          {/* ── AKSİYA DÜYMƏLƏRİ ── */}
           <div className="nb-actions-anim" style={{ display:"flex", alignItems:"center", gap:2, flexShrink:0 }}>
             <div style={{ marginRight:4 }}><LanguageSwitcher/></div>
             <button className="bib" onClick={()=>setShowSearch(true)} title={t("navbar.search")}><Search size={18}/></button>
@@ -924,9 +834,7 @@ const Navbar = () => {
         </div>
       </nav>
 
-      {/* ══════════════════════════════════════════
-          MOBİL SİDEBAR
-      ══════════════════════════════════════════ */}
+      {/* ══ MOBİL SİDEBAR ══ */}
       {isMenuOpen && (
         <div style={{ position:"fixed", inset:0, background:"rgba(15,5,5,0.42)", backdropFilter:"blur(5px)", zIndex:140, animation:"nbFd 0.2s" }} onClick={()=>setIsMenuOpen(false)}/>
       )}
@@ -1017,9 +925,7 @@ const Navbar = () => {
         )}
       </div>
 
-      {/* ══════════════════════════════════════════
-          MOBİL ALT NAVİQASİYA
-      ══════════════════════════════════════════ */}
+      {/* ══ MOBİL ALT NAVİQASİYA ══ */}
       <div className="mBN mob-bottom-nav nb-mob-anim"
         style={{ display:"none", position:"fixed", bottom:0, left:0, right:0, zIndex:80, background:"rgba(255,255,255,0.97)", backdropFilter:"blur(16px)", borderTop:"1px solid #f3f4f6", boxShadow:"0 -4px 24px rgba(0,0,0,0.07)" }}
       >
@@ -1052,7 +958,7 @@ const Navbar = () => {
           {isAuthenticated ? (
             <Link to="/my-orders" className={`bmt ${isAct("/my-orders")?"on":""}`}><Package size={21}/><span>{t("navbar.orders")}</span></Link>
           ) : (
-            <Link to="/login"    className={`bmt ${isAct("/login")?"on":""}`}><User size={21}/><span>{t("navbar.profile")}</span></Link>
+            <Link to="/login" className={`bmt ${isAct("/login")?"on":""}`}><User size={21}/><span>{t("navbar.profile")}</span></Link>
           )}
         </div>
       </div>

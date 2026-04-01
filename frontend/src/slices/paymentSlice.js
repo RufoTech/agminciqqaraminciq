@@ -10,7 +10,7 @@ export const createPaymentIntent = createAsyncThunk(
     async ({ amount, currency }, thunkAPI) => {
         try {
             const response = await axios.post(
-                'http://localhost:3010/commerce/mehsullar/products/create-payment-intent',
+                'https://amdulraxim-production.up.railway.app/commerce/mehsullar/products/create-payment-intent',
                 { amount, currency },
                 { withCredentials: true } // Cookie-dəki token backend-ə göndərilir (isAuthenticatedUser üçün)
             );

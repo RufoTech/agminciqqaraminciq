@@ -23,6 +23,16 @@ const StatusBadge = ({ status }) => {
     );
 };
 
+// ── TAMAMLANDI BADGEİ ─────────────────────────────────────────────────
+// isCompleted === true olduqda — yəni status "delivered" olduqda —
+// sifarişin üstündə yaşıl "Sifariş tamamlandı" banneri göstərilir.
+const CompletedBanner = () => (
+    <div className="flex items-center gap-2 px-6 py-2.5 bg-green-50 border-b border-green-100">
+        <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+        <span className="text-xs font-semibold text-green-700">Sifariş tamamlandı</span>
+    </div>
+);
+
 const MyOrders = () => {
     const dispatch = useDispatch();
     // ✅ myOrders state-indən oxu (adminOrders ilə qarışmasın)
@@ -73,6 +83,12 @@ const MyOrders = () => {
                                 key={order._id || order.id}
                                 className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"
                             >
+                                {/* ── TAMAMLANDI BANNERİ ──────────────────────────────────────
+                                    isCompleted backend-dən gəlir — status "delivered" olduqda
+                                    backend order.isCompleted = true edir.
+                                    Bu banner yalnız tam çatdırılmış sifarişlərdə görünür. */}
+                                {order.isCompleted && <CompletedBanner />}
+
                                 {/* Sifariş başlığı */}
                                 <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 bg-gray-50 border-b border-gray-200">
                                     <div>

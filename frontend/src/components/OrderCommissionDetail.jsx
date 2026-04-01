@@ -9,7 +9,7 @@ const OrderCommissionDetail = ({ orderId }) => {
     if (!orderId) return;
     axios
       .get(
-        `http://localhost:4000/commerce/mehsullar/commission/order/${orderId}`,
+        `https://amdulraxim-production.up.railway.app/commerce/mehsullar/commission/order/${orderId}`,
         { withCredentials: true }
       )
       // ✅ Düzəliş: backend birbaşa { success, orderAmount, ... } qaytarır
