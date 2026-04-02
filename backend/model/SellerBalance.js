@@ -1,125 +1,95 @@
-// mongoose — MongoDB ilə işləmək üçün kitabxana.
+// ── SellerBalance.js — PashaPay Split-Payment Balans Modeli ─────────────────
+//
+// Köhnə modeldən FƏRQ:
+//   Köhnə: pendingCommission (şirkətin payı) + availableBalance
+//          → Şirkət ay sonu Stripe ilə komisyanı çəkirdi
+//
+//   Yeni:  pendingEarning (webhook gözlənilir) + availableBalance (çəkilə bilər)
+//          → Komisya PashaPay tərəfindən avtomatik ayrılır
+//          → Biz yalnız satıcının 87%-ini izləyirik
+//          → "Komisya borcu" anlayışı yoxdur — PashaPay özü ayırır
+//
+// Pul axını:
+//   createCommission()      → pendingEarning   += sellerEarning (87%)
+//   markCommissionSettled() → pendingEarning   -= sellerEarning
+//                           → availableBalance  += sellerEarning
+//                           → totalEarned       += sellerEarning
+//   markCommissionFailed()  → pendingEarning   -= sellerEarning (ləğv)
+//   withdrawBalance()       → availableBalance  -= amount
+//                           → totalWithdrawn    += amount
+// ─────────────────────────────────────────────────────────────────────────────
+
 import mongoose from "mongoose";
 
+delete mongoose.models["SellerBalance"];
+delete mongoose.modelSchemas?.["SellerBalance"];
 
-// =====================================================================
-// SATICI BALANSI SCHEMA-SI — sellerBalanceSchema
-// ---------------------------------------------------------------------
-// Hər satıcının maliyyə vəziyyətini izləyir.
-// Bu model Commission modeli ilə birlikdə işləyir:
-//   Commission → hər sifariş üçün ayrıca qeyd
-//   SellerBalance → satıcının cəmlənmiş (ümumi) maliyyə vəziyyəti
-//
-// Niyə ayrı model?
-//   Hər dəfə satıcının balansını bilmək üçün bütün Commission
-//   qeydlərini toplamaq (aggregate) lazım olmur — bu model
-//   cəmi hazır saxlayır. Dashboard widget-i üçün sürətlidir.
-//
-// İş axını:
-//   Sifariş yaranır → createCommission() →
-//     availableBalance  += sellerEarning    (satıcının payı)
-//     pendingCommission += commissionAmount  (şirkətin payı)
-//     totalEarned       += sellerEarning
-//   Ay sonu transferCommission() →
-//     pendingCommission -= totalCommission  (sıfırlayır)
-//     totalCommissionPaid += totalCommission
-//   Satıcı withdrawBalance() →
-//     availableBalance -= amount
-//     totalWithdrawn   += amount
-// =====================================================================
 const sellerBalanceSchema = new mongoose.Schema(
     {
-        // ── SATICI İDENTİFİKATORU ─────────────────────────────────────
-        // sellerId — satıcının mağaza adı (String).
-        //
-        // Niyə ObjectId deyil, String?
-        //   Commission.sellerId ilə eyni tip saxlanılır — uyğunluq üçün.
-        //   commissionController-da: getOrCreateBalance(sellerId)
-        //   sellerId = Admin.sellerInfo.storeName (mağaza adı).
-        //
-        // unique: true — hər mağaza üçün yalnız BİR balans qeydi olur.
-        //   İki dəfə eyni satıcı üçün qeyd yaratmaq mümkün deyil.
-        //   getOrCreateBalance() funksiyası: findOne → yoxdursa create.
+        // sellerId → satıcının unikal identifikatoru (storeName)
         sellerId: {
             type:     String,
             required: true,
             unique:   true,
         },
 
-        // ── MALİYYƏ SAHƏLƏRİ ─────────────────────────────────────────
+        // ── MALİYYƏ SAHƏLƏRİ ─────────────────────────────────────────────────
 
-        // availableBalance — satıcının indi çəkə biləcəyi pul.
-        // Artır:  +sellerEarning (hər sifarişdə)
-        // Azalır: -amount       (withdrawBalance() çağırılanda)
-        //
-        // Məsələn: 100 AZN-lik sifarişdən 8% komisya →
-        //   availableBalance += 92 AZN
+        // availableBalance → satıcının çəkə biləcəyi hazır pul.
+        // YALNIZ PashaPay "settled" webhook-u gəldikdən sonra artır.
+        // Azalır: withdrawBalance() çağırılanda.
         availableBalance: {
             type:    Number,
             default: 0,
+            min:     0,
         },
 
-        // pendingCommission — şirkətə aid olan hissə.
-        // Satıcı bu pula TOXUNA BİLMƏZ — şirkətindir.
-        // Artır:  +commissionAmount (hər sifarişdə)
-        // Azalır: -commissionAmount (transferCommission() sonra sıfırlanır)
-        //
-        // Bu sahə dashboard-da "Gözləyən komisya: 80 AZN" kimi göstərilir.
-        // Satıcı görür amma çəkə bilmir — şeffaflıq üçün saxlanılır.
-        pendingCommission: {
+        // pendingEarning → PashaPay-ın hələ "settle" etmədiyi satıcı payı.
+        // Sifariş yarananda artır (createCommission).
+        // Azalır: settled → availableBalance-ə keçir
+        //         failed  → ləğv edilir (geri götürülür)
+        // Dashboard-da: "Gözləyən: 87 AZN"
+        pendingEarning: {
             type:    Number,
             default: 0,
+            min:     0,
         },
 
-        // totalEarned — satıcının bütün zamanlarda qazandığı ümumi məbləğ.
-        // Heç vaxt azalmır — yalnız artır.
-        // Niyə lazımdır?
-        //   availableBalance azalır (çəkildikdə).
-        //   totalEarned həmişə tam tarixçəni göstərir.
-        //   Dashboard-da "Bu günə qədər 5000 AZN qazandınız" üçün.
+        // totalEarned → bütün zamanlarda settled olan ümumi qazanc.
+        // Heç vaxt azalmır — yalnız settled olanda artır.
+        // Statistika üçün: "Satıcı platformda 50,000 AZN qazandı"
         totalEarned: {
             type:    Number,
             default: 0,
         },
 
-        // totalWithdrawn — satıcının indiyə qədər çıxardığı ümumi məbləğ.
-        // Heç vaxt azalmır — yalnız artır.
-        // availableBalance - totalWithdrawn = cari balans yoxlaması üçün
-        // istifadə oluna bilər (audit məqsədi ilə).
+        // totalWithdrawn → satıcının indiyə qədər çıxardığı ümumi məbləğ.
+        // Heç vaxt azalmır.
         totalWithdrawn: {
             type:    Number,
             default: 0,
         },
 
-        // totalCommissionPaid — şirkətə ödənilmiş ümumi komisya.
-        // Heç vaxt azalmır — yalnız artır.
-        // Niyə lazımdır?
-        //   pendingCommission sıfırlanır (ay sonu köçürüldükdən sonra).
-        //   totalCommissionPaid isə ümumi tarixçəni saxlayır.
-        //   Admin panelindəki "İndiyə qədər 400 AZN komisya ödəndi" üçün.
-        totalCommissionPaid: {
+        // totalOrderAmount → satıcının bütün sifarişlərinin (settled) ümumi məbləği.
+        // Brendex dashboard-da dövriyyə statistikası üçün.
+        totalOrderAmount: {
+            type:    Number,
+            default: 0,
+        },
+
+        // totalBrendexCommission → Brendex-ə çatan ümumi komisya (məlumat üçün).
+        // PashaPay özü ayırır — biz izləyirik.
+        totalBrendexCommission: {
             type:    Number,
             default: 0,
         },
     },
     {
-        // timestamps: true — createdAt və updatedAt avtomatik əlavə olunur.
-        // updatedAt — balansın son dəyişiklik tarixi.
         timestamps: true,
     }
 );
 
+// sellerId üzrə tez axtarış üçün indeks
+sellerBalanceSchema.index({ sellerId: 1 });
 
-// =====================================================================
-// MODEL EXPORT
-// ---------------------------------------------------------------------
-// mongoose.model("SellerBalance", sellerBalanceSchema):
-//   "SellerBalance" → kolleksiya adı "sellerbalances" olur.
-//
-// Bu model vasitəsilə əməliyyatlar:
-//   SellerBalance.findOne({ sellerId })        → balansı tap
-//   SellerBalance.create({ sellerId })         → yeni balans yarat (default 0-lar)
-//   SellerBalance.findOneAndUpdate(...)        → $inc ilə artır/azalt
-//   balance.save()                             → birbaşa dəyişiklik yaz
-// =====================================================================
 export default mongoose.model("SellerBalance", sellerBalanceSchema);

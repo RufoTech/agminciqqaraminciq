@@ -1,50 +1,56 @@
-// mongoose â€” MongoDB ilÉ™ iÅŸlÉ™mÉ™k Ã¼Ã§Ã¼n kitabxana.
 import mongoose from "mongoose";
 
-// catchAsyncErrors â€” async funksiyalardakÄ± xÉ™talarÄ± avtomatik tutur.
 import catchAsyncErrors from "../middleware/catchAsyncErrors.js";
-
-// ErrorHandler â€” Ã¶zÉ™l xÉ™ta sinifi.
 import ErrorHandler from "../utils/errorHandler.js";
-
-// cloudinary â€” ÅŸÉ™kil yÃ¼klÉ™mÉ™ vÉ™ silmÉ™ servisi.
 import cloudinary from "../utils/cloudinary.js";
-
-// fs â€” Node.js-in fayl sistemi modulu.
 import fs from "fs";
 
-// â”€â”€ MÆHSUL MODELLÆRÄ° â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 import {
     allowedCategoryValues,
     Product,
     Phone, Laptop, Camera, Headphone, Console, iPad,
     WomenClothing, MenClothing, KidsClothing,
     HomeAppliance, HomeAndGarden, Beauty, Sports, Automotive,
-    // Yeni modellər (hamısı)
+    // 1. Elektronika
     TVs, AudioSystems, PhotoVideo, GameConsoles, SmartHome, Gadgets, ElectronicsAccessories,
+    // 2. Telefonlar və aksesuarlar
     Smartphones, FeaturePhones, HeadphonesNew, CablesAdapters, Powerbanks, PhoneAccessories,
+    // 3. Kompüter və ofis
     LaptopsNew, Desktops, Monitors, PrintersScanners, OfficeAccessories, Components,
+    // 4. Məişət texnikası
     LargeAppliances, SmallAppliances, KitchenAppliances, AirConditioners, WaterHeaters,
+    // 5. Ev və dekor
     HomeDecor, Lighting, HomeTextiles, Kitchenware, BathAccessories,
+    // 6. Mebel
     LivingRoomFurniture, BedroomFurniture, KitchenFurniture, OfficeFurniture, GardenFurniture,
+    // 7. Qadın geyimləri
+    WomensTops, WomensBottoms, WomensCasual, WomensSport, WomensFormal, WomensUnderwear,
+    // 8. Kişi geyimləri
+    MensTops, MensBottoms, MensCasual, MensSport, MensFormal, MensUnderwear,
+    // 9. Ayaqqabı
     SportsShoes, ClassicShoes, CasualShoes, Sandals,
+    // 10. Aksesuarlar
     Bags, Watches, Sunglasses, Jewelry, Belts,
+    // 11. Gözəllik və kosmetika
     Makeup, Skincare, HairCare, Fragrance, MenGrooming, Hygiene,
+    // 12. Uşaq və ana
     KidsClothingNew, Toys, Strollers, BabyFeeding, SchoolSupplies,
+    // 13. İdman və outdoor
     FitnessEquipment, Camping, Bicycles, SportsApparel, SportsAccessories,
+    // 14. Avto məhsullar
     AutoAccessories, AutoElectronics, SpareParts, AutoChemicals,
+    // 15. Hədiyyələr və lifestyle
     GiftSets, Souvenirs, TrendingProducts, BooksHobbies,
 } from "../model/Product.js";
 
-// notifyFavoritePriceChange â€” qiymÉ™t dÉ™yiÅŸdikdÉ™ bildiriÅŸ gÃ¶ndÉ™rir.
 import { notifyFavoritePriceChange } from "../utils/notificationHelper.js";
 
 
-// â”€â”€ KATEQORÄ°YA â†’ MODEL XÆRÄ°TÆSÄ° â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Bu xÉ™ritÉ™ bÃ¼tÃ¼n controllerlarda eyni olduÄŸu Ã¼Ã§Ã¼n bir dÉ™fÉ™ tÉ™yin edilir,
-// newProduct vÉ™ updateProduct hÉ™r ikisi istifadÉ™ edir â€” kod tÉ™krarÄ± aradan qalxÄ±r.
+// =====================================================================
+// KATEQORİYA → MODEL XƏRİTƏSİ
+// =====================================================================
 const categoryModels = {
-    // Mövcud kateqoriyalar
+    // Legacy kateqoriyalar
     Phones:         Phone,
     Laptops:        Laptop,
     Cameras:        Camera,
@@ -60,98 +66,131 @@ const categoryModels = {
     Sports:         Sports,
     Automotive:     Automotive,
 
-    // Yeni kateqoriyalar – Elektronika
-    TVs:                     TVs,
-    AudioSystems:            AudioSystems,
-    PhotoVideo:              PhotoVideo,
-    GameConsoles:            GameConsoles,
-    SmartHome:               SmartHome,
-    Gadgets:                 Gadgets,
-    ElectronicsAccessories:  ElectronicsAccessories,
+    // 1. Elektronika
+    TVs:                    TVs,
+    AudioSystems:           AudioSystems,
+    PhotoVideo:             PhotoVideo,
+    GameConsoles:           GameConsoles,
+    SmartHome:              SmartHome,
+    Gadgets:                Gadgets,
+    ElectronicsAccessories: ElectronicsAccessories,
 
-    // Telefonlar və aksesuarlar
-    Smartphones:             Smartphones,
-    FeaturePhones:           FeaturePhones,
-    HeadphonesNew:           HeadphonesNew,
-    CablesAdapters:          CablesAdapters,
-    Powerbanks:              Powerbanks,
-    PhoneAccessories:        PhoneAccessories,
+    // 2. Telefonlar və aksesuarlar
+    Smartphones:      Smartphones,
+    FeaturePhones:    FeaturePhones,
+    HeadphonesNew:    HeadphonesNew,
+    CablesAdapters:   CablesAdapters,
+    Powerbanks:       Powerbanks,
+    PhoneAccessories: PhoneAccessories,
 
-    // Kompüter və ofis
-    LaptopsNew:              LaptopsNew,
-    Desktops:                Desktops,
-    Monitors:                Monitors,
-    PrintersScanners:        PrintersScanners,
-    OfficeAccessories:       OfficeAccessories,
-    Components:              Components,
+    // 3. Kompüter və ofis
+    LaptopsNew:        LaptopsNew,
+    Desktops:          Desktops,
+    Monitors:          Monitors,
+    PrintersScanners:  PrintersScanners,
+    OfficeAccessories: OfficeAccessories,
+    Components:        Components,
 
-    // Məişət texnikası
-    LargeAppliances:         LargeAppliances,
-    SmallAppliances:         SmallAppliances,
-    KitchenAppliances:       KitchenAppliances,
-    AirConditioners:         AirConditioners,
-    WaterHeaters:            WaterHeaters,
+    // 4. Məişət texnikası
+    LargeAppliances:   LargeAppliances,
+    SmallAppliances:   SmallAppliances,
+    KitchenAppliances: KitchenAppliances,
+    AirConditioners:   AirConditioners,
+    WaterHeaters:      WaterHeaters,
 
-    // Ev və dekor
-    HomeDecor:               HomeDecor,
-    Lighting:                Lighting,
-    HomeTextiles:            HomeTextiles,
-    Kitchenware:             Kitchenware,
-    BathAccessories:         BathAccessories,
+    // 5. Ev və dekor
+    HomeDecor:      HomeDecor,
+    Lighting:       Lighting,
+    HomeTextiles:   HomeTextiles,
+    Kitchenware:    Kitchenware,
+    BathAccessories:BathAccessories,
 
-    // Mebel
-    LivingRoomFurniture:     LivingRoomFurniture,
-    BedroomFurniture:        BedroomFurniture,
-    KitchenFurniture:        KitchenFurniture,
-    OfficeFurniture:         OfficeFurniture,
-    GardenFurniture:         GardenFurniture,
+    // 6. Mebel
+    LivingRoomFurniture: LivingRoomFurniture,
+    BedroomFurniture:    BedroomFurniture,
+    KitchenFurniture:    KitchenFurniture,
+    OfficeFurniture:     OfficeFurniture,
+    GardenFurniture:     GardenFurniture,
 
-    // Ayaqqabı
-    SportsShoes:             SportsShoes,
-    ClassicShoes:            ClassicShoes,
-    CasualShoes:             CasualShoes,
-    Sandals:                 Sandals,
+    // 7. Qadın geyimləri
+    WomensTops:     WomensTops,
+    WomensBottoms:  WomensBottoms,
+    WomensCasual:   WomensCasual,
+    WomensSport:    WomensSport,
+    WomensFormal:   WomensFormal,
+    WomensUnderwear:WomensUnderwear,
 
-    // Aksesuarlar
-    Bags:                    Bags,
-    Watches:                 Watches,
-    Sunglasses:              Sunglasses,
-    Jewelry:                 Jewelry,
-    Belts:                   Belts,
+    // 8. Kişi geyimləri
+    MensTops:     MensTops,
+    MensBottoms:  MensBottoms,
+    MensCasual:   MensCasual,
+    MensSport:    MensSport,
+    MensFormal:   MensFormal,
+    MensUnderwear:MensUnderwear,
 
-    // Gözəllik və kosmetika
-    Makeup:                  Makeup,
-    Skincare:                Skincare,
-    HairCare:                HairCare,
-    Fragrance:               Fragrance,
-    MenGrooming:             MenGrooming,
-    Hygiene:                 Hygiene,
+    // 9. Ayaqqabı
+    SportsShoes:  SportsShoes,
+    ClassicShoes: ClassicShoes,
+    CasualShoes:  CasualShoes,
+    Sandals:      Sandals,
 
-    // Uşaq və ana
-    KidsClothingNew:         KidsClothingNew,
-    Toys:                    Toys,
-    Strollers:               Strollers,
-    BabyFeeding:             BabyFeeding,
-    SchoolSupplies:          SchoolSupplies,
+    // 10. Aksesuarlar
+    Bags:       Bags,
+    Watches:    Watches,
+    Sunglasses: Sunglasses,
+    Jewelry:    Jewelry,
+    Belts:      Belts,
 
-    // İdman və outdoor
-    FitnessEquipment:        FitnessEquipment,
-    Camping:                 Camping,
-    Bicycles:                Bicycles,
-    SportsApparel:           SportsApparel,
-    SportsAccessories:       SportsAccessories,
+    // 11. Gözəllik və kosmetika
+    Makeup:     Makeup,
+    Skincare:   Skincare,
+    HairCare:   HairCare,
+    Fragrance:  Fragrance,
+    MenGrooming:MenGrooming,
+    Hygiene:    Hygiene,
 
-    // Avto məhsullar
-    AutoAccessories:         AutoAccessories,
-    AutoElectronics:         AutoElectronics,
-    SpareParts:              SpareParts,
-    AutoChemicals:           AutoChemicals,
+    // 12. Uşaq və ana
+    KidsClothingNew: KidsClothingNew,
+    Toys:            Toys,
+    Strollers:       Strollers,
+    BabyFeeding:     BabyFeeding,
+    SchoolSupplies:  SchoolSupplies,
 
-    // Hədiyyələr və lifestyle
-    GiftSets:                GiftSets,
-    Souvenirs:               Souvenirs,
-    TrendingProducts:        TrendingProducts,
-    BooksHobbies:            BooksHobbies,
+    // 13. İdman və outdoor
+    FitnessEquipment:  FitnessEquipment,
+    Camping:           Camping,
+    Bicycles:          Bicycles,
+    SportsApparel:     SportsApparel,
+    SportsAccessories: SportsAccessories,
+
+    // 14. Avto məhsullar
+    AutoAccessories:  AutoAccessories,
+    AutoElectronics:  AutoElectronics,
+    SpareParts:       SpareParts,
+    AutoChemicals:    AutoChemicals,
+
+    // 15. Hədiyyələr və lifestyle
+    GiftSets:        GiftSets,
+    Souvenirs:       Souvenirs,
+    TrendingProducts:TrendingProducts,
+    BooksHobbies:    BooksHobbies,
+
+    // Parent (əsas) kateqoriyalar — ümumi Product modeli istifadə edir
+    "Elektronika":                  Product,
+    "Telefonlar ve aksesuarlar":    Product,
+    "Komputer ve ofis texnikasi":   Product,
+    "Meiset texnikasi":             Product,
+    "Ev ve dekor":                  Product,
+    "Mebel":                        Product,
+    "Qadin geyimleri":              Product,
+    "Kisi geyimleri":               Product,
+    "Ayaqqabi":                     Product,
+    "Aksesuarlar":                  Product,
+    "Gozellik ve kosmetika":        Product,
+    "Usaq ve ana":                  Product,
+    "Idman ve outdoor":             Product,
+    "Avto mehsullar":               Product,
+    "Hediyyeler ve lifestyle":      Product,
 };
 
 const booleanFieldNames = ["controllerIncluded", "cellular"];
@@ -168,7 +207,7 @@ const normalizeProductPayload = (payload = {}) => {
     }
 
     for (const fieldName of booleanFieldNames) {
-        if (normalizedPayload[fieldName] === "true") normalizedPayload[fieldName] = true;
+        if (normalizedPayload[fieldName] === "true")  normalizedPayload[fieldName] = true;
         if (normalizedPayload[fieldName] === "false") normalizedPayload[fieldName] = false;
     }
 
@@ -183,7 +222,7 @@ const getModelByCategory = (category) => {
 
 
 // =====================================================================
-// BÃœTÃœN MÆHSULLARI GÃ–STÆR â€” getProducts
+// BÜTÜN MƏHSULLARI GÖSTƏR — getProducts
 // GET /api/v1/products?limit=20&offset=0
 // =====================================================================
 export const getProducts = catchAsyncErrors(async (req, res, next) => {
@@ -198,35 +237,35 @@ export const getProducts = catchAsyncErrors(async (req, res, next) => {
 
 
 // =====================================================================
-// MÆHSULUN DETALLARI â€” getProductDetails
+// MƏHSULUN DETALLARI — getProductDetails
 // GET /api/v1/product/:id
 // =====================================================================
 export const getProductDetails = catchAsyncErrors(async (req, res, next) => {
 
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-        return next(new ErrorHandler("YanlÄ±ÅŸ mÉ™hsul ID-si", 400));
+        return next(new ErrorHandler("Yanlış məhsul ID-si", 400));
     }
 
     const product = await Product.findById(req.params.id);
 
-    if (!product) return next(new ErrorHandler("MÉ™hsul tapÄ±lmadÄ±", 404));
+    if (!product) return next(new ErrorHandler("Məhsul tapılmadı", 404));
 
     res.status(200).json({ success: true, product });
 });
 
 
 // =====================================================================
-// MÆHSULU SÄ°L â€” deleteProduct
+// MƏHSULU SİL — deleteProduct
 // DELETE /api/v1/admin/product/:id
 // =====================================================================
 export const deleteProduct = catchAsyncErrors(async (req, res, next) => {
 
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-        return next(new ErrorHandler("YanlÄ±ÅŸ mÉ™hsul ID-si", 400));
+        return next(new ErrorHandler("Yanlış məhsul ID-si", 400));
     }
 
     const product = await Product.findById(req.params.id);
-    if (!product) return next(new ErrorHandler("MÉ™hsul tapÄ±lmadÄ±", 404));
+    if (!product) return next(new ErrorHandler("Məhsul tapılmadı", 404));
 
     if (product.images && product.images.length > 0) {
         for (let image of product.images) {
@@ -240,14 +279,14 @@ export const deleteProduct = catchAsyncErrors(async (req, res, next) => {
 
     await Product.deleteOne({ _id: req.params.id });
 
-    res.status(200).json({ success: true, message: "MÉ™hsul uÄŸurla silindi" });
+    res.status(200).json({ success: true, message: "Məhsul uğurla silindi" });
 });
 
 
 // =====================================================================
-// YENÄ° MÆHSUL YARAT â€” newProduct
+// YENİ MƏHSUL YARAT — newProduct
 // POST /api/v1/admin/product/new
-// Body: FormData (ÅŸÉ™killÉ™r + mÉ™hsul mÉ™lumatlarÄ±)
+// Body: FormData (şəkillər + məhsul məlumatları)
 // =====================================================================
 export const newProduct = catchAsyncErrors(async (req, res, next) => {
 
@@ -261,7 +300,7 @@ export const newProduct = catchAsyncErrors(async (req, res, next) => {
                 });
                 images.push({ public_id: result.public_id, url: result.secure_url });
             } catch (err) {
-                console.error("Cloudinary yÃ¼klÉ™mÉ™ xÉ™tasÄ±:", err.message);
+                console.error("Cloudinary yükləmə xətası:", err.message);
             } finally {
                 if (fs.existsSync(file.path)) {
                     fs.unlinkSync(file.path);
@@ -275,13 +314,14 @@ export const newProduct = catchAsyncErrors(async (req, res, next) => {
     }
 
     if (!req.body.seller) {
-        return next(new ErrorHandler("SatÄ±cÄ± mÉ™lumatÄ± tapÄ±lmadÄ±", 400));
+        return next(new ErrorHandler("Satıcı məlumatı tapılmadı", 400));
     }
 
     if (!req.body.category) {
         return next(new ErrorHandler("Kateqoriya seçilməyib", 400));
     }
 
+    const normalizedPayload = normalizeProductPayload(req.body);
     const Model = getModelByCategory(normalizedPayload.category);
     if (!Model) {
         return next(new ErrorHandler("Daxil edilen kateqoriya movcud deyil", 400));
@@ -294,21 +334,21 @@ export const newProduct = catchAsyncErrors(async (req, res, next) => {
 
 
 // =====================================================================
-// MÆHSULU YENÄ°LÆ â€” updateProduct
+// MƏHSULU YENİLƏ — updateProduct
 // PUT /api/v1/admin/product/:id
 // Body: FormData
 // =====================================================================
 export const updateProduct = catchAsyncErrors(async (req, res, next) => {
 
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-        return next(new ErrorHandler("YanlÄ±ÅŸ mÉ™hsul ID-si", 400));
+        return next(new ErrorHandler("Yanlış məhsul ID-si", 400));
     }
 
     let product = await Product.findById(req.params.id);
-    if (!product) return next(new ErrorHandler("MÉ™hsul tapÄ±lmadÄ±", 404));
+    if (!product) return next(new ErrorHandler("Məhsul tapılmadı", 404));
 
     const normalizedPayload = normalizeProductPayload(req.body);
-    const oldPrice   = product.price;
+    const oldPrice    = product.price;
     const newCategory = normalizedPayload.category;
 
     let images = [...(product.images || [])];
@@ -324,7 +364,7 @@ export const updateProduct = catchAsyncErrors(async (req, res, next) => {
                     try {
                         await cloudinary.uploader.destroy(img.public_id);
                     } catch (err) {
-                        console.error(`Cloudinary ÅŸÉ™kil silmÉ™ xÉ™tasÄ± (${img.public_id}):`, err.message);
+                        console.error(`Cloudinary şəkil silmə xətası (${img.public_id}):`, err.message);
                     }
                     images = images.filter((i) => i.public_id !== img.public_id);
                 }
@@ -342,7 +382,7 @@ export const updateProduct = catchAsyncErrors(async (req, res, next) => {
                 });
                 images.push({ public_id: result.public_id, url: result.secure_url });
             } catch (err) {
-                console.error("Cloudinary yÃ¼klÉ™mÉ™ xÉ™tasÄ±:", err.message);
+                console.error("Cloudinary yükləmə xətası:", err.message);
             } finally {
                 if (fs.existsSync(file.path)) {
                     fs.unlinkSync(file.path);
@@ -403,7 +443,7 @@ export const updateProduct = catchAsyncErrors(async (req, res, next) => {
 
 
 // =====================================================================
-// MÆHSUL AXTAR â€” searchProducts
+// MƏHSUL AXTAR — searchProducts
 // GET /api/v1/products/search?query=iphone&page=1&limit=10
 // =====================================================================
 export const searchProducts = catchAsyncErrors(async (req, res, next) => {
@@ -411,7 +451,7 @@ export const searchProducts = catchAsyncErrors(async (req, res, next) => {
     const { query, page = 1, limit = 10 } = req.query;
 
     if (!query || query.trim() === "") {
-        return next(new ErrorHandler("AxtarÄ±ÅŸ sÃ¶zÃ¼ daxil edin", 400));
+        return next(new ErrorHandler("Axtarış sözü daxil edin", 400));
     }
 
     const trimmedQuery = query.trim();
@@ -431,17 +471,17 @@ export const searchProducts = catchAsyncErrors(async (req, res, next) => {
     ]);
 
     res.status(200).json({
-        success:    true,
+        success:     true,
         products,
         total,
-        totalPages: Math.ceil(total / limitNum),
+        totalPages:  Math.ceil(total / limitNum),
         currentPage: pageNum,
     });
 });
 
 
 // =====================================================================
-// RÆY ÆLAVÆ ET / YENÄ°LÆ â€” createOrUpdateReview
+// RƏY ƏLAVƏ ET / YENİLƏ — createOrUpdateReview
 // PUT /api/v1/review
 // Body: { productId, rating, comment }
 // =====================================================================
@@ -450,20 +490,20 @@ export const createOrUpdateReview = catchAsyncErrors(async (req, res, next) => {
     const { productId, rating, comment } = req.body;
 
     if (!productId || !rating) {
-        return next(new ErrorHandler("productId vÉ™ rating mÉ™cburidir", 400));
+        return next(new ErrorHandler("productId və rating məcburidir", 400));
     }
 
     if (!mongoose.Types.ObjectId.isValid(productId)) {
-        return next(new ErrorHandler("YanlÄ±ÅŸ mÉ™hsul ID-si", 400));
+        return next(new ErrorHandler("Yanlış məhsul ID-si", 400));
     }
 
     const ratingNum = Number(rating);
     if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5) {
-        return next(new ErrorHandler("Reytinq 1 ilÉ™ 5 arasÄ±nda olmalÄ±dÄ±r", 400));
+        return next(new ErrorHandler("Reytinq 1 ilə 5 arasında olmalıdır", 400));
     }
 
     const product = await Product.findById(productId);
-    if (!product) return next(new ErrorHandler("MÉ™hsul tapÄ±lmadÄ±", 404));
+    if (!product) return next(new ErrorHandler("Məhsul tapılmadı", 404));
 
     const review = {
         user:    req.user._id,
@@ -499,23 +539,23 @@ export const createOrUpdateReview = catchAsyncErrors(async (req, res, next) => {
 
     await product.save({ validateBeforeSave: false });
 
-    res.status(200).json({ success: true, message: "RÉ™y uÄŸurla É™lavÉ™ edildi" });
+    res.status(200).json({ success: true, message: "Rəy uğurla əlavə edildi" });
 });
 
 
 // =====================================================================
-// MÆHSULUN RÆYLÆRÄ°NÄ° GÃ–STÆR â€” getProductReviews
+// MƏHSULUN RƏYLƏRİNİ GÖSTƏR — getProductReviews
 // GET /api/v1/reviews/:id
 // =====================================================================
 export const getProductReviews = catchAsyncErrors(async (req, res, next) => {
 
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-        return next(new ErrorHandler("YanlÄ±ÅŸ mÉ™hsul ID-si", 400));
+        return next(new ErrorHandler("Yanlış məhsul ID-si", 400));
     }
 
     const product = await Product.findById(req.params.id);
 
-    if (!product) return next(new ErrorHandler("MÉ™hsul tapÄ±lmadÄ±", 404));
+    if (!product) return next(new ErrorHandler("Məhsul tapılmadı", 404));
 
     res.status(200).json({ success: true, reviews: product.reviews });
 });

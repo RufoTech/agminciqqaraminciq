@@ -1,129 +1,436 @@
-// Commission — hər sifariş üçün komisya qeydlərini saxlayan model.
-// Hansı sifarişdən, hansı satıcıdan, nə qədər komisya alındığını izləyir.
-import Commission    from "../model/Commission.js";
-
-// SellerBalance — hər satıcının pul vəziyyətini saxlayan model.
-// availableBalance (çəkilə bilən), pendingCommission (şirkətə aid),
-// totalEarned, totalWithdrawn kimi sahələr buradadır.
-import SellerBalance from "../model/SellerBalance.js";
-
-// Stripe — kart ödəməsini emal etmək üçün kitabxana.
-// Komisya köçürməsini Stripe PaymentIntent vasitəsilə həyata keçirir.
-import Stripe        from "stripe";
-
-// generateReceipt — komisya köçürməsinin PDF çekini yaradan yardımçı funksiya.
-// Satıcıya və şirkətə sübut sənədi kimi göndərilir.
-import generateReceipt from "../utils/generateReceipt.js";
-
-
-// Stripe obyekti yaradılır — .env-dəki gizli açarla.
-// Bu fayl yüklənən kimi bir dəfə yaradılır və yenidən istifadə olunur (Singleton).
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-// ── KOMİSYA FAİZİ ────────────────────────────────────────────────────────────
-// Şirkətin hər sifarişdən götürdüyü faiz — 8%.
-// Mərkəzi sabit olaraq saxlanılır: dəyişmək lazım olsa yalnız burada dəyişilir,
-// bütün hesablamalar avtomatik yenilənir.
-const COMMISSION_PERCENTAGE = 8;
-
-
-// ════════════════════════════════════════════════════════════════════════════
-//  YARDIMÇI FUNKSIYA — Satıcı balansını tap, yoxdursa yarat
-// ────────────────────────────────────────────────────────────────────────────
-// Niyə ayrıca funksiya?
-//   Çünki bir neçə yerdə eyni məntiq lazımdır: tapmaq, yoxdursa yaratmaq.
-//   Kodu təkrarlamamaq üçün (DRY — Don't Repeat Yourself) buraya çıxarıldı.
+// ── commissionController.js — PashaPay Split-Payment Komisya Sistemi ────────
 //
-// Niyə findOne + create, upsert deyil?
-//   Upsert (findOneAndUpdate + upsert:true) balans sahələrini sıfır ilə
-//   başladır; burada isə yaradılma anında default dəyərlər Schema-da
-//   təyin olunur — daha aydın və təhlükəsizdir.
-// ════════════════════════════════════════════════════════════════════════════
+// Bu sistem köhnə Stripe əsaslı modeldən KÖKLÜ FƏRQLIDIR.
+//
+// ❌ KÖHNƏ (Stripe modeli):
+//   → Alıcı pulu platformaya ödəyirdi
+//   → Biz ay sonu komisyanı çıxarıb satıcıya köçürürdük
+//   → Stripe PaymentIntent, transferCommission() lazım idi
+//   → Lisenziya riski: pul "keçidi" hesab olunurdu
+//
+// ✅ YENİ (PashaPay Split modeli):
+//   → Alıcı ödəyir → PashaPay AVTOMATIK bölür:
+//       87% → satıcı hesabına (Brendex-in idarəsindəki sub-merchant)
+//       10% → Brendex hesabına (komisya — birbaşa gəlir)
+//        3% → PashaPay haqqı (provider özü götürür)
+//   → Pul fiziki olaraq bizə GƏLMİR → lisenziya problemi YOX
+//   → Biz yalnız İZLƏYİRİK + webhook ilə statusu yeniləyirik
+//
+// Əsas axın:
+//   1. Sifariş yaranır        → createCommission()         → status: "pending"
+//   2. PashaPay ödənişi alır  → createPashaPayOrder()      → pashaPayOrderId alırıq
+//   3. PashaPay settle edir   → handlePashaPayWebhook()    → status: "settled"
+//   4. Satıcı balansı artır   → (webhook içində avtomatik)
+//   5. Satıcı pul çəkir       → withdrawBalance()
+// ─────────────────────────────────────────────────────────────────────────────
+
+import Commission    from "../model/Commission.js";
+import SellerBalance from "../model/SellerBalance.js";
+import crypto        from "crypto";   // Webhook imza yoxlaması üçün
+import axios         from "axios";    // PashaPay API-yə sorğu üçün
+
+
+// ── SABITLƏR ─────────────────────────────────────────────────────────────────
+
+// Bölgü faizləri — bir yerdə saxlanılır, hər yerdə istifadə olunur (DRY)
+const BRENDEX_COMMISSION_PERCENT = 10;   // Brendex-in komisyası
+const PROVIDER_FEE_PERCENT       =  3;   // PashaPay haqqı
+const SELLER_EARNING_PERCENT     = 87;   // Satıcıya düşən hissə
+// Cəm: 10 + 3 + 87 = 100 ✓
+
+// PashaPay API konfiqurasiyası — .env faylından gəlir
+const PASHAPAY_BASE_URL   = process.env.PASHAPAY_BASE_URL;    // "https://api.pashapay.az"
+const PASHAPAY_MERCHANT   = process.env.PASHAPAY_MERCHANT_ID; // Sizin merchant ID
+const PASHAPAY_SECRET_KEY = process.env.PASHAPAY_SECRET_KEY;  // Webhook imza açarı
+const PASHAPAY_API_KEY    = process.env.PASHAPAY_API_KEY;     // API sorğu açarı
+
+// Brendex-in PashaPay-dakı sub-merchant ID-ləri
+// Hər satıcının PashaPay-da öz alt hesabı olur — split oraya gedir
+// Bu məlumat ya verilənlər bazasında (Seller modeli) ya da env-də saxlanılır
+// Burada env nümunəsi göstərilir — real istifadədə Seller modelindən çəkin
+// const BRENDEX_SUBMERCHANT_ID = process.env.BRENDEX_SUBMERCHANT_ID;
+
+
+// ── YARDIMÇI FUNKSIYALAR ─────────────────────────────────────────────────────
+
+// getOrCreateBalance — satıcı balansını tap, yoxdursa yarat
+// DRY: eyni məntiq bir neçə yerdə lazımdır
 const getOrCreateBalance = async (sellerId) => {
     let balance = await SellerBalance.findOne({ sellerId });
     if (!balance) balance = await SellerBalance.create({ sellerId });
     return balance;
 };
 
+// calcSplit — məbləği faizlərə görə böl
+// orderAmount = 100 AZN → { brendex: 10, provider: 3, seller: 87 }
+// Math.round(...* 100) / 100 → kuruş səhvlərini düzəldir (floating point)
+const calcSplit = (orderAmount) => {
+    const brendexCommission = Math.round(orderAmount * BRENDEX_COMMISSION_PERCENT) / 100;
+    const providerFee       = Math.round(orderAmount * PROVIDER_FEE_PERCENT)       / 100;
+    const sellerEarning     = Math.round(orderAmount * SELLER_EARNING_PERCENT)     / 100;
+    return { brendexCommission, providerFee, sellerEarning };
+};
 
-// ════════════════════════════════════════════════════════════════════════════
-//  1. SİFARİŞ YARANANDA ÇAĞIRILIR — createCommission
-// ────────────────────────────────────────────────────────────────────────────
-// Bu funksiya birbaşa HTTP endpoint deyil — order controller-dən çağırılır:
-//   await createCommission(order._id, order.sellerId, order.totalPrice)
-//
-// Nə edir:
-//   ① Sifariş məbləğindən komisya və satıcı qazancını hesablayır
-//   ② Commission kolleksiyasına yeni qeyd yazır
-//   ③ Satıcının SellerBalance-ini yeniləyir
-//
-// Niyə "pending" statusu?
-//   Komisya dərhal şirkətə köçürülmür — ay sonunda toplu köçürmə edilir.
-//   Bu aralıq dövrdə status "pending" qalır.
-// ════════════════════════════════════════════════════════════════════════════
-export const createCommission = async (orderId, sellerId, orderAmount) => {
-
-    // Komisya hesablaması:
-    //   orderAmount = 100 AZN olsa:
-    //   commissionAmount = 100 * 8 / 100 = 8 AZN  → şirkətə
-    //   sellerEarning    = 100 - 8 = 92 AZN        → satıcıya
-    const commissionAmount = (orderAmount * COMMISSION_PERCENTAGE) / 100;
-    const sellerEarning    = orderAmount - commissionAmount;
-    const now              = new Date();
-
-    // Commission qeydini bazaya yaz.
-    // month/year sahələri aylıq hesabat sorğularında filter üçün lazımdır.
-    // Məsələn: "mart 2026-nın bütün komisyaları" → {month:3, year:2026}
-    await Commission.create({
-        orderId,
-        sellerId,
-        orderAmount,
-        commissionPercentage: COMMISSION_PERCENTAGE,
-        commissionAmount,
-        sellerEarning,
-        month:  now.getMonth() + 1, // getMonth() 0-dan başlayır → +1 lazımdır
-        year:   now.getFullYear(),
-        status: "pending",
-    });
-
-    // Satıcının balansını tap (yoxdursa yarat) və yenilə.
-    //
-    // availableBalance  → satıcının çəkə biləcəyi pul (sellerEarning əlavə olunur)
-    // pendingCommission → şirkətə aid olan hissə (satıcı buna toxuna BİLMƏZ)
-    // totalEarned       → bütün zamanlarda qazandığı ümumi məbləğ (statistika)
-    const balance = await getOrCreateBalance(sellerId);
-    balance.availableBalance  += sellerEarning;
-    balance.pendingCommission += commissionAmount;
-    balance.totalEarned       += sellerEarning;
-    await balance.save();
+// verifyPashaPayWebhook — PashaPay-dan gələn webhook-un həqiqi olduğunu yoxla
+// PashaPay X-Signature header-i göndərir → HMAC-SHA256 ilə yoxlanılır
+// Bu olmadan hər kəs webhook endpoint-inə POST edə bilər → TƏHLÜKƏSİZLİK
+const verifyPashaPayWebhook = (rawBody, signature) => {
+    const expectedSig = crypto
+        .createHmac("sha256", PASHAPAY_SECRET_KEY)
+        .update(rawBody)
+        .digest("hex");
+    // timingSafeEqual → brute-force hücumunun qarşısını alır
+    return crypto.timingSafeEqual(
+        Buffer.from(expectedSig),
+        Buffer.from(signature || "")
+    );
 };
 
 
 // ════════════════════════════════════════════════════════════════════════════
-//  2. SİFARİŞ ÜZRƏ KOMİSYA — getOrderCommission
+//  1. SİFARİŞ YARANANDA ÇAĞIRILIR — createCommission
+// ────────────────────────────────────────────────────────────────────────────
+// Bu funksiya birbaşa HTTP endpoint DEYİL — order controller-dən çağırılır:
+//   await createCommission(order._id, order.sellerId, order.totalPrice)
+//
+// Nə edir:
+//   ① Bölgünü hesablayır (87/10/3)
+//   ② Commission qeydi yaradır (status: "pending")
+//   ③ Satıcının pendingEarning-ini artırır
+//   ④ PashaPay-da ödəniş sifarişi yaradır (split parametrləri ilə)
+//   ⑤ pashaPayOrderId-i Commission-a yazır
+//
+// Niyə "pending"?
+//   PashaPay webhook-u gəlməmiş pul "settled" deyil.
+//   Webhook gəldikdə markCommissionSettled() çağırılır.
+// ════════════════════════════════════════════════════════════════════════════
+export const createCommission = async (orderId, sellerId, orderAmount, sellerSubMerchantId) => {
+
+    // ① Bölgünü hesabla
+    const { brendexCommission, providerFee, sellerEarning } = calcSplit(orderAmount);
+    const now = new Date();
+
+    // ② Commission qeydini yarat
+    const commission = await Commission.create({
+        orderId,
+        sellerId,
+        orderAmount,
+        brendexCommission,
+        brendexCommissionPercent: BRENDEX_COMMISSION_PERCENT,
+        providerFee,
+        providerFeePercent:       PROVIDER_FEE_PERCENT,
+        sellerEarning,
+        sellerEarningPercent:     SELLER_EARNING_PERCENT,
+        month:  now.getMonth() + 1,
+        year:   now.getFullYear(),
+        status: "pending",
+    });
+
+    // ③ Satıcının gözləyən qazancını artır
+    const balance = await getOrCreateBalance(sellerId);
+    balance.pendingEarning   += sellerEarning;
+    balance.totalOrderAmount += orderAmount;
+    await balance.save();
+
+    // ④ PashaPay-da split ödəniş sifarişi yarat
+    //
+    // PashaPay split API-si:
+    //   "splits" massivindəki hər element bir alıcı deməkdir.
+    //   Brendex öz sub-merchant ID-sinə 10% alır.
+    //   Satıcı öz sub-merchant ID-sinə 87% alır.
+    //   3% PashaPay özü götürür (splits-ə daxil edilmir).
+    //
+    // amount: tam qəpik cinsindən (AZN * 100)
+    // Nümunə: 100 AZN → amount: 10000
+    //
+    // NOT: Əgər PashaPay-ın real split API-si fərqlidirsə,
+    //      bu strukturu PashaPay sənədlərinə uyğun dəyişdirin.
+    //      Ümumi məntiqi dəyişmək lazım deyil — yalnız "body" hissəsi.
+    let pashaPayOrderId = null;
+    try {
+        const ppResponse = await axios.post(
+            `${PASHAPAY_BASE_URL}/v1/orders`,
+            {
+                merchant_id:  PASHAPAY_MERCHANT,
+                amount:       Math.round(orderAmount * 100),   // qəpik
+                currency:     "AZN",
+                description:  `Brendex sifariş: ${orderId}`,
+                reference_id: commission._id.toString(),       // bizim Commission ID
+                splits: [
+                    {
+                        // Brendex-in payı (10%)
+                        sub_merchant_id: process.env.BRENDEX_SUBMERCHANT_ID,
+                        amount:          Math.round(brendexCommission * 100),
+                        description:     "Brendex komisyası",
+                    },
+                    {
+                        // Satıcının payı (87%)
+                        sub_merchant_id: sellerSubMerchantId,
+                        amount:          Math.round(sellerEarning * 100),
+                        description:     "Satıcı qazancı",
+                    },
+                    // 3% PashaPay özü götürür — splits-ə yazmırıq
+                ],
+            },
+            {
+                headers: {
+                    "Authorization": `Bearer ${PASHAPAY_API_KEY}`,
+                    "Content-Type":  "application/json",
+                },
+                timeout: 10_000,   // 10 saniyə timeout
+            }
+        );
+
+        // PashaPay-dan gələn sifariş ID-sini saxla
+        pashaPayOrderId = ppResponse.data?.order_id || ppResponse.data?.id || null;
+
+        // Commission-a yazırıq — webhook gəldikdə bu ID ilə tapacağıq
+        if (pashaPayOrderId) {
+            commission.pashaPayOrderId = pashaPayOrderId;
+            await commission.save();
+        }
+    } catch (ppError) {
+        // PashaPay xətası commission yaratmağı dayandırmamalıdır —
+        // order yarandı, amma PashaPay çağırışı uğursuz oldu.
+        // Bu halı logla, sonra retry mexanizmi ilə yenidən cəhd et.
+        console.error(
+            `[Commission] PashaPay order yaratma uğursuz | orderId: ${orderId} | Xəta: ${ppError.message}`
+        );
+        // commission.status "pending" qalır — manual müdaxilə üçün
+    }
+
+    return commission;
+};
+
+
+// ════════════════════════════════════════════════════════════════════════════
+//  2. PASHAPAY WEBHOOK — handlePashaPayWebhook
+// ────────────────────────────────────────────────────────────────────────────
+// POST /commission/webhook/pashapay
+//
+// PashaPay ödəniş tamamlandıqda (settled) və ya uğursuz olduqda (failed)
+// bu endpoint-ə POST edir.
+//
+// ⚠️  TƏHLÜKƏSİZLİK: Bu endpoint-ə autentifikasiya middleware-i QOYMA.
+//     Yalnız PashaPay çağırır. İmza yoxlaması içəridə edilir.
+//
+// Webhook body nümunəsi (PashaPay):
+//   {
+//     "event":          "PAYMENT_SETTLED",
+//     "order_id":       "pp_ord_abc123",
+//     "transaction_id": "pp_txn_xyz789",
+//     "amount":         10000,
+//     "currency":       "AZN",
+//     "status":         "SETTLED"
+//   }
+//
+// Express-də raw body lazımdır — imza yoxlaması üçün:
+//   app.use("/commission/webhook", express.raw({ type: "application/json" }))
+// ════════════════════════════════════════════════════════════════════════════
+export const handlePashaPayWebhook = async (req, res) => {
+    // ① İmza yoxla — saxta webhook-ların qarşısını al
+    const signature = req.headers["x-pashapay-signature"] || req.headers["x-signature"];
+    const rawBody   = req.body;   // raw buffer (express.raw middleware lazımdır)
+
+    if (PASHAPAY_SECRET_KEY) {
+        try {
+            const isValid = verifyPashaPayWebhook(rawBody, signature);
+            if (!isValid) {
+                console.warn("[Webhook] Saxta imza — rədd edildi.");
+                return res.status(401).json({ success: false, message: "Etibarsız imza." });
+            }
+        } catch {
+            return res.status(401).json({ success: false, message: "İmza yoxlama xətası." });
+        }
+    }
+
+    // ② JSON parse et
+    let payload;
+    try {
+        payload = JSON.parse(rawBody.toString());
+    } catch {
+        return res.status(400).json({ success: false, message: "Etibarsız JSON." });
+    }
+
+    const { event, order_id, transaction_id, status } = payload;
+
+    // ③ Commission-u tap — pashaPayOrderId ilə
+    const commission = await Commission.findOne({ pashaPayOrderId: order_id });
+    if (!commission) {
+        // PashaPay-ın test eventləri və ya artıq emal edilmiş webhook-lar üçün
+        // 200 qaytarırıq — PashaPay yenidən göndərməsin
+        console.warn(`[Webhook] Bilinməyən order_id: ${order_id}`);
+        return res.status(200).json({ received: true });
+    }
+
+    // ④ Artıq emal edilibsə — idempotency (eyni webhook iki dəfə gəlsə)
+    if (commission.status === "settled" || commission.status === "failed") {
+        console.info(`[Webhook] Artıq emal edilib: ${order_id} → ${commission.status}`);
+        return res.status(200).json({ received: true });
+    }
+
+    const now = new Date();
+
+    // ⑤ Webhook növünə görə iş et
+    const normalizedStatus = (status || event || "").toUpperCase();
+
+    if (normalizedStatus.includes("SETTLED") || normalizedStatus.includes("SUCCESS")) {
+        // ✅ ÖDƏNIŞ UĞURLU — satıcının balansını yenilə
+        await markCommissionSettled(commission, transaction_id, payload, now);
+
+    } else if (
+        normalizedStatus.includes("FAILED") ||
+        normalizedStatus.includes("DECLINED") ||
+        normalizedStatus.includes("CANCELLED")
+    ) {
+        // ❌ ÖDƏNIŞ UĞURSUZ — pendingEarning-i geri al
+        await markCommissionFailed(commission, payload, now);
+
+    } else if (normalizedStatus.includes("REFUND")) {
+        // 🔄 GERİ QAYTARMA
+        await markCommissionRefunded(commission, payload, now);
+
+    } else {
+        // Naməlum status — logla, amma 200 qaytar (PashaPay yenidən göndərməsin)
+        console.warn(`[Webhook] Naməlum status: ${normalizedStatus} | order_id: ${order_id}`);
+    }
+
+    // PashaPay 200 gözləyir — almasa webhook-u təkrar göndərir
+    res.status(200).json({ received: true });
+};
+
+
+// ── Webhook köməkçi funksiyaları ─────────────────────────────────────────────
+
+// markCommissionSettled — PashaPay "settled" webhook-u gəldi
+//   Commission → "settled"
+//   SellerBalance: pendingEarning azal, availableBalance artır, totalEarned artır
+async function markCommissionSettled(commission, transactionId, payload, now) {
+    // Commission-u yenilə
+    commission.status                = "settled";
+    commission.pashaPayTransactionId = transactionId || null;
+    commission.settledAt             = now;
+    commission.webhookPayload        = payload;
+    await commission.save();
+
+    // Satıcı balansını yenilə
+    //   pendingEarning   → azal (artıq "yolda" deyil)
+    //   availableBalance → artır (artıq çəkilə bilər)
+    //   totalEarned      → ümumi statistika
+    //   totalBrendexCommission → Brendex statistikası
+    await SellerBalance.findOneAndUpdate(
+        { sellerId: commission.sellerId },
+        {
+            $inc: {
+                pendingEarning:         -commission.sellerEarning,
+                availableBalance:        commission.sellerEarning,
+                totalEarned:             commission.sellerEarning,
+                totalBrendexCommission:  commission.brendexCommission,
+            },
+        }
+    );
+
+    console.info(
+        `[Webhook] ✅ Settled | sellerId: ${commission.sellerId} | sellerEarning: ${commission.sellerEarning} AZN`
+    );
+}
+
+// markCommissionFailed — PashaPay "failed" webhook-u gəldi
+//   Commission → "failed"
+//   SellerBalance: pendingEarning azal (pul gəlmədi — gözləmə ləğv)
+async function markCommissionFailed(commission, payload, now) {
+    commission.status         = "failed";
+    commission.failedAt       = now;
+    commission.webhookPayload = payload;
+    await commission.save();
+
+    await SellerBalance.findOneAndUpdate(
+        { sellerId: commission.sellerId },
+        {
+            $inc: {
+                pendingEarning:   -commission.sellerEarning,
+                totalOrderAmount: -commission.orderAmount,
+            },
+        }
+    );
+
+    console.warn(
+        `[Webhook] ❌ Failed | sellerId: ${commission.sellerId} | orderAmount: ${commission.orderAmount} AZN`
+    );
+}
+
+// markCommissionRefunded — geri qaytarma
+//   Commission → "refunded"
+//   Əgər settled idisə: availableBalance-dən çıx
+async function markCommissionRefunded(commission, payload, now) {
+    const wasSettled = commission.status === "settled";
+
+    commission.status         = "refunded";
+    commission.refundedAt     = now;
+    commission.webhookPayload = payload;
+    await commission.save();
+
+    if (wasSettled) {
+        // Settled idi → availableBalance-dən çıx
+        await SellerBalance.findOneAndUpdate(
+            { sellerId: commission.sellerId },
+            {
+                $inc: {
+                    availableBalance:        -commission.sellerEarning,
+                    totalEarned:             -commission.sellerEarning,
+                    totalBrendexCommission:  -commission.brendexCommission,
+                    totalOrderAmount:        -commission.orderAmount,
+                },
+            }
+        );
+    } else {
+        // Pending idi → sadəcə pendingEarning-i azalt
+        await SellerBalance.findOneAndUpdate(
+            { sellerId: commission.sellerId },
+            {
+                $inc: {
+                    pendingEarning:   -commission.sellerEarning,
+                    totalOrderAmount: -commission.orderAmount,
+                },
+            }
+        );
+    }
+
+    console.info(
+        `[Webhook] 🔄 Refunded | sellerId: ${commission.sellerId} | wasSettled: ${wasSettled}`
+    );
+}
+
+
+// ════════════════════════════════════════════════════════════════════════════
+//  3. SİFARİŞ ÜZRƏ KOMİSYA — getOrderCommission
 // ────────────────────────────────────────────────────────────────────────────
 // GET /commission/order/:orderId
 //
-// Sifariş detalları səhifəsində göstərilir:
-//   "Bu sifarişdən 8 AZN komisya tutuldu, sizə 92 AZN çatdı."
+// Sifariş detalları səhifəsində:
+//   "Bu sifarişdən 10 AZN Brendex komisyası tutuldu, sizə 87 AZN çatdı."
 // ════════════════════════════════════════════════════════════════════════════
 export const getOrderCommission = async (req, res) => {
     try {
-        // orderId ilə həmin sifarişin komisya qeydini tap
         const commission = await Commission.findOne({ orderId: req.params.orderId });
 
         if (!commission) {
             return res.status(404).json({ success: false, message: "Komisya tapılmadı." });
         }
 
-        // Həssas sahələr (sellerId, stripeId) göndərilmir — yalnız lazımlılar
         res.json({
-            success:              true,
-            orderAmount:          commission.orderAmount,
-            commissionPercentage: commission.commissionPercentage,
-            commissionAmount:     commission.commissionAmount,
-            sellerEarning:        commission.sellerEarning,
-            status:               commission.status,
+            success: true,
+            data: {
+                orderAmount:              commission.orderAmount,
+                brendexCommission:        commission.brendexCommission,
+                brendexCommissionPercent: commission.brendexCommissionPercent,
+                providerFee:              commission.providerFee,
+                providerFeePercent:       commission.providerFeePercent,
+                sellerEarning:            commission.sellerEarning,
+                sellerEarningPercent:     commission.sellerEarningPercent,
+                status:                   commission.status,
+                settledAt:                commission.settledAt,
+            },
         });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
@@ -132,15 +439,12 @@ export const getOrderCommission = async (req, res) => {
 
 
 // ════════════════════════════════════════════════════════════════════════════
-//  3. SATICININ BALANSI — getSellerBalance
+//  4. SATICININ BALANSI — getSellerBalance
 // ────────────────────────────────────────────────────────────────────────────
 // GET /commission/balance/:sellerId
 //
-// Satıcı panelindəki "Balans" widget-i üçün:
-//   "Çəkilə bilən: 920 AZN | Gözləyən komisya: 80 AZN"
-//
-// getOrCreateBalance istifadəsi — ilk dəfə panelə girən satıcıda
-// balanssız xəta verməsin deyə avtomatik 0 balans yaradılır.
+// Satıcı paneli "Balans" widget-i:
+//   "Çəkilə bilər: 870 AZN | Gözləyən: 87 AZN"
 // ════════════════════════════════════════════════════════════════════════════
 export const getSellerBalance = async (req, res) => {
     try {
@@ -153,206 +457,58 @@ export const getSellerBalance = async (req, res) => {
 
 
 // ════════════════════════════════════════════════════════════════════════════
-//  4. AYLIK XÜLASƏ — getMonthlyCommission
-// ────────────────────────────────────────────────════════════════════════════
+//  5. AYLIK XÜLASƏ — getMonthlyCommission
+// ────────────────────────────────────────────────────────────────────────────
 // GET /commission/monthly/:sellerId?month=3&year=2026
 //
-// Satıcı panelindəki aylıq hesabat üçün:
-//   "Mart 2026: 15 sifariş, 1500 AZN dövriyyə, 120 AZN komisya tutuldu."
-//
-// Query parametrləri göndərilməsə — cari ay/il istifadə olunur (default).
+// Satıcı paneli aylıq hesabat:
+//   "Mart 2026: 15 sifariş | 1500 AZN dövriyyə | 150 AZN Brendex komisyası | 1305 AZN sizə"
 // ════════════════════════════════════════════════════════════════════════════
 export const getMonthlyCommission = async (req, res) => {
     try {
         const { sellerId } = req.params;
         const now   = new Date();
-
-        // parseInt() — URL-dən gələn dəyər string olur, rəqəmə çevirmək lazımdır.
-        // || ilə default dəyər: göndərilməsə cari ay/il götürülür.
         const month = parseInt(req.query.month) || now.getMonth() + 1;
         const year  = parseInt(req.query.year)  || now.getFullYear();
 
-        // populate("orderId", "createdAt totalPrice") —
-        // Commission sənədindəki orderId-ni götürüb Order kolleksiyasından
-        // yalnız createdAt və totalPrice sahələrini çəkir.
-        // Bu sayəsində cavabda hər komisyanın sifariş tarixi və məbləği görünür.
         const commissions = await Commission.find({ sellerId, month, year }).populate(
-            "orderId",
-            "createdAt totalPrice"
+            "orderId", "createdAt totalPrice"
         );
 
-        // reduce() — massivin bütün elementlərini toplayır.
-        // s = yığılan cəm (accumulator), c = cari element (current)
-        const totalOrderAmount   = commissions.reduce((s, c) => s + c.orderAmount,     0);
-        const totalCommission    = commissions.reduce((s, c) => s + c.commissionAmount, 0);
-        const totalSellerEarning = commissions.reduce((s, c) => s + c.sellerEarning,    0);
+        const totalOrderAmount      = commissions.reduce((s, c) => s + c.orderAmount,      0);
+        const totalBrendexCommission= commissions.reduce((s, c) => s + c.brendexCommission, 0);
+        const totalProviderFee      = commissions.reduce((s, c) => s + c.providerFee,       0);
+        const totalSellerEarning    = commissions.reduce((s, c) => s + c.sellerEarning,     0);
 
-        // Hələ köçürülməmiş (pending) komisyaların cəmi
-        const pendingAmount = commissions
+        // Status üzrə saylar
+        const byStatus = commissions.reduce((acc, c) => {
+            acc[c.status] = (acc[c.status] || 0) + 1;
+            return acc;
+        }, {});
+
+        const pendingAmount  = commissions
             .filter((c) => c.status === "pending")
-            .reduce((s, c) => s + c.commissionAmount, 0);
+            .reduce((s, c) => s + c.sellerEarning, 0);
+
+        const settledAmount  = commissions
+            .filter((c) => c.status === "settled")
+            .reduce((s, c) => s + c.sellerEarning, 0);
 
         res.json({
-            success:            true,
+            success: true,
             month,
             year,
-            totalOrderAmount,
-            totalCommission,
-            totalSellerEarning,
-            totalOrders:        commissions.length,
-            pendingAmount,                           // hələ köçürülməyən komisya
-            alreadyTransferred: totalCommission - pendingAmount, // köçürülmüş hissə
+            summary: {
+                totalOrders:          commissions.length,
+                totalOrderAmount,
+                totalBrendexCommission,
+                totalProviderFee,
+                totalSellerEarning,
+                pendingSellerEarning: pendingAmount,   // hələ gözlənilir
+                settledSellerEarning: settledAmount,   // artıq çəkilə bilər
+                byStatus,
+            },
             commissions,
-        });
-    } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
-    }
-};
-
-
-// ════════════════════════════════════════════════════════════════════════════
-//  5. AY SONU KOMİSYA TRANSFERİ — transferCommission
-// ────────────────────────────────────────────────────────────────────────────
-// POST /commission/transfer
-// Body: { sellerId, sellerName, month, year, paymentMethodId }
-//
-// Bu, sistemin ən kritik endpoint-idir. Addımlar:
-//   ① Həmin ay üçün "pending" komisyaları tapır
-//   ② Stripe PaymentIntent ilə şirkət hesabına ödəniş edir
-//   ③ Stripe uğurlu olarsa — komisyaları "transferred" edir
-//   ④ Satıcının pendingCommission balansını sıfırlayır
-//   ⑤ PDF çek yaradır
-//   ⑥ Çek URL-ini komisyalara əlavə edir
-//
-// Niyə addımlar bu ardıcıllıqla?
-//   Stripe uğursuz olarsa komisyalar "failed" olur — heç bir balans
-//   dəyişmir. Bu, "yarım köçürmə" ssenarisinin qarşısını alır.
-// ════════════════════════════════════════════════════════════════════════════
-export const transferCommission = async (req, res) => {
-    try {
-        const { sellerId, sellerName, month, year, paymentMethodId } = req.body;
-
-        // ① Həmin ay üçün "pending" statuslu komisyaları tap
-        const pending = await Commission.find({ sellerId, month, year, status: "pending" });
-
-        // Pending komisya yoxdursa — ya köçürülüb, ya da bu ay sifariş yoxdur
-        if (pending.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: "Köçürüləcək komisya yoxdur. Artıq köçürülmüş ola bilər.",
-            });
-        }
-
-        // ② Ümumi məbləğləri hesabla — Stripe-a göndəriləcək rəqəm buradan çıxır
-        const totalOrderAmount   = pending.reduce((s, c) => s + c.orderAmount,     0);
-        const totalCommission    = pending.reduce((s, c) => s + c.commissionAmount, 0);
-        const totalSellerEarning = pending.reduce((s, c) => s + c.sellerEarning,    0);
-
-        // ③ Stripe PaymentIntent yarat və dərhal təsdiqlə
-        //
-        // amount: Math.round(totalCommission * 100) — Stripe qəpik (kuruş) ilə işləyir.
-        //   Məsələn: 80.50 AZN → 8050 qəpik. Math.round() ondalıq xətalarını düzəldir.
-        //
-        // confirm: true — yaratmaqla eyni anda təsdiqlər, ayrıca confirm() lazım deyil.
-        //
-        // automatic_payment_methods + allow_redirects: "never" —
-        //   Server tərəfli ödənişdə yönləndirmə olmur; bu parametr Stripe-ın
-        //   3D Secure yönləndirməsini söndürür.
-        let paymentIntent;
-        try {
-            paymentIntent = await stripe.paymentIntents.create({
-                amount:      Math.round(totalCommission * 100),
-                currency:    "azn",
-                payment_method: paymentMethodId,
-                confirm:     true,
-                automatic_payment_methods: { enabled: true, allow_redirects: "never" },
-                description: `Komisya köçürməsi | Satıcı: ${sellerId} | ${month}/${year}`,
-            });
-        } catch (stripeErr) {
-            // Stripe xətasında komisyaları "failed" et —
-            // satıcı nə baş verdiyini görə bilsin, yenidən cəhd etsin.
-            await Commission.updateMany(
-                { sellerId, month, year, status: "pending" },
-                { status: "failed" }
-            );
-            return res.status(400).json({
-                success: false,
-                message: `Stripe xətası: ${stripeErr.message}`,
-            });
-        }
-
-        // Stripe cavabı "succeeded" deyilsə — ödəniş tamamlanmayıb
-        // (məsələn: "requires_action" → 3D Secure tələb edir)
-        if (paymentIntent.status !== "succeeded") {
-            return res.status(400).json({
-                success: false,
-                message: `Ödəniş tamamlanmadı. Stripe statusu: ${paymentIntent.status}`,
-            });
-        }
-
-        const transferredAt = new Date();
-
-        // ④ Komisyaları "transferred" olaraq işarələ.
-        // updateMany — eyni şərtə uyan bütün sənədləri bir əməliyyatla yeniləyir.
-        // stripePaymentIntentId — uğurlu ödənişin Stripe-dakı ID-si (izlənə bilər).
-        await Commission.updateMany(
-            { sellerId, month, year, status: "pending" },
-            {
-                status:                "transferred",
-                stripePaymentIntentId: paymentIntent.id,
-                transferredAt,
-            }
-        );
-
-        // ⑤ Satıcının pendingCommission balansını azalt.
-        // $inc — MongoDB-nin artırma/azaltma operatoru.
-        //   pendingCommission: -totalCommission → azalt (0-a çatır)
-        //   totalCommissionPaid: +totalCommission → statistika üçün artır
-        //
-        // Niyə availableBalance dəyişmir?
-        //   Çünki bu pul artıq şirkətin — satıcının balansına heç daxil olmamışdı.
-        //   Yalnız pendingCommission sütunu azalır.
-        await SellerBalance.findOneAndUpdate(
-            { sellerId },
-            {
-                $inc: {
-                    pendingCommission:   -totalCommission,
-                    totalCommissionPaid:  totalCommission,
-                },
-            }
-        );
-
-        // ⑥ PDF çek yarat — köçürmənin rəsmi sənədi
-        const { fileName } = await generateReceipt({
-            sellerId,
-            sellerName,
-            month,
-            year,
-            totalOrderAmount,
-            totalCommission,
-            totalSellerEarning,
-            ordersCount: pending.length,
-            stripeId:    paymentIntent.id,
-            transferredAt,
-        });
-
-        const receiptUrl = `/uploads/receipts/${fileName}`;
-
-        // ⑦ Çek URL-ini həmin komisyalara əlavə et —
-        // satıcı hər komisyanın çekini ayrıca görə bilsin.
-        await Commission.updateMany(
-            { sellerId, month, year, status: "transferred", transferredAt },
-            { receiptUrl }
-        );
-
-        res.json({
-            success:           true,
-            message:           `${totalCommission.toFixed(2)} AZN uğurla şirkət hesabına köçürüldü!`,
-            totalCommission,
-            totalSellerEarning,
-            ordersCount:       pending.length,
-            stripeId:          paymentIntent.id,
-            receiptUrl,
         });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
@@ -366,17 +522,17 @@ export const transferCommission = async (req, res) => {
 // POST /commission/withdraw
 // Body: { sellerId, amount }
 //
-// Satıcı öz qazancını (availableBalance) hesabına çıxardır.
+// Satıcı öz availableBalance-ini hesabına çıxarır.
 //
-// Niyə pendingCommission-a toxunulmur?
-//   pendingCommission şirkətə aiddir — satıcı onu çəkə bilməz.
-//   Yalnız availableBalance (satıcının qazancı) azalır.
+// Niyə pendingEarning-ə toxunmuruz?
+//   pendingEarning hələ PashaPay-dan "settled" olmayıb.
+//   Ola bilsin ödəniş uğursuz olsun → pul gəlməsin.
+//   Yalnız availableBalance (artıq settled) çəkilə bilər.
 // ════════════════════════════════════════════════════════════════════════════
 export const withdrawBalance = async (req, res) => {
     try {
         const { sellerId, amount } = req.body;
 
-        // Mənfi və ya sıfır məbləğ qəbul edilmir
         if (!amount || amount <= 0) {
             return res.status(400).json({
                 success: false,
@@ -386,8 +542,6 @@ export const withdrawBalance = async (req, res) => {
 
         const balance = await SellerBalance.findOne({ sellerId });
 
-        // Balans yoxdur və ya çəkilmək istənilən məbləğ mövcud balansdan çoxdur
-        // balance?.availableBalance → balance null olarsa 0 qaytarır (optional chaining)
         if (!balance || balance.availableBalance < amount) {
             return res.status(400).json({
                 success:          false,
@@ -396,19 +550,15 @@ export const withdrawBalance = async (req, res) => {
             });
         }
 
-        // availableBalance azaldılır — çəkilən məbləğ qədər
-        // totalWithdrawn artırılır — satıcının ümumi çəkimə statistikası üçün
         balance.availableBalance -= amount;
         balance.totalWithdrawn   += amount;
         await balance.save();
 
         res.json({
-            success:           true,
-            message:           `${amount.toFixed(2)} AZN uğurla çəkildi!`,
-            remainingBalance:  balance.availableBalance,
-            // pendingCommission da göstərilir — satıcı nə qədər komisya
-            // gözlədiyini bilsin (amma ona çata bilməz)
-            pendingCommission: balance.pendingCommission,
+            success:          true,
+            message:          `${amount.toFixed(2)} AZN uğurla çəkildi!`,
+            remainingBalance: balance.availableBalance,
+            pendingEarning:   balance.pendingEarning,   // məlumat üçün
         });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
@@ -417,38 +567,42 @@ export const withdrawBalance = async (req, res) => {
 
 
 // ════════════════════════════════════════════════════════════════════════════
-//  7. ADMİN — BÜTÜN SATICILARIN KOMİSYALARI — getAllCommissions
-// ────────────────────────────────────────────────────────────────────────────
-// GET /commission/admin/all?month=3&year=2026&status=pending
+//  7. ADMİN — BÜTÜN KOMİSYALAR — getAllCommissions
+// ────────────────────────────────────════════════════════════════════════════
+// GET /commission/admin/all?month=3&year=2026&status=pending&sellerId=X
 //
-// Admin panelindəki "Komisyalar" cədvəli üçün.
-// Query parametrləri ilə filter edilə bilir: ay, il, status.
-// Göndərilməyən filter parametrləri nəzərə alınmır — hamısı gəlir.
+// Admin paneli "Komisyalar" cədvəli.
+// Dinamik filter: göndərilən parametrlər nəzərə alınır, qalanları yox.
 // ════════════════════════════════════════════════════════════════════════════
 export const getAllCommissions = async (req, res) => {
     try {
-        // Dinamik filter obyekti — yalnız göndərilən parametrlər əlavə edilir.
-        // Məsələn: yalnız month göndərilibsə → {month: 3}
-        // Heç biri göndərilməyibsə → {} → bütün komisyalar gəlir
         const filter = {};
-        if (req.query.month)  filter.month  = parseInt(req.query.month);
-        if (req.query.year)   filter.year   = parseInt(req.query.year);
-        if (req.query.status) filter.status = req.query.status;
+        if (req.query.month)    filter.month    = parseInt(req.query.month);
+        if (req.query.year)     filter.year     = parseInt(req.query.year);
+        if (req.query.status)   filter.status   = req.query.status;
+        if (req.query.sellerId) filter.sellerId = req.query.sellerId;
 
         const commissions = await Commission.find(filter)
-            .populate("sellerId", "name email")  // satıcının adı və emaili
-            .populate("orderId",  "totalPrice createdAt") // sifarişin məbləği və tarixi
-            .sort({ createdAt: -1 }); // ən yeni üstdə
+            .populate("sellerId", "name email")
+            .populate("orderId",  "totalPrice createdAt")
+            .sort({ createdAt: -1 });
 
-        // Ümumi komisya məbləği — admin neçə pul topladığını görür
-        const totalCommissionAmount = commissions.reduce(
-            (s, c) => s + c.commissionAmount, 0
+        // Ümumi məbləğlər — admin dashboard statistikası
+        const totals = commissions.reduce(
+            (acc, c) => {
+                acc.orderAmount       += c.orderAmount;
+                acc.brendexCommission += c.brendexCommission;
+                acc.providerFee       += c.providerFee;
+                acc.sellerEarning     += c.sellerEarning;
+                return acc;
+            },
+            { orderAmount: 0, brendexCommission: 0, providerFee: 0, sellerEarning: 0 }
         );
 
         res.json({
-            success:             true,
-            totalCommissionAmount,
-            count:               commissions.length,
+            success: true,
+            count:   commissions.length,
+            totals,
             commissions,
         });
     } catch (err) {
@@ -458,31 +612,60 @@ export const getAllCommissions = async (req, res) => {
 
 
 // ════════════════════════════════════════════════════════════════════════════
-//  8. ADMİN — BÜTÜN SATICILARIN BALANSLARI — getAllSellerBalances
+//  8. ADMİN — BÜTÜN SATICI BALANSLARI — getAllSellerBalances
 // ────────────────────────────────────────────────────────────────────────────
 // GET /commission/admin/balances
 //
-// Admin "Satıcı Balansları" səhifəsi üçün.
-// sort({ pendingCommission: -1 }) — ən çox komisya borcu olan satıcı üstdə,
-// bu, adminin kimə öncelik verəcəyini asanlaşdırır.
+// Admin "Satıcı Balansları" səhifəsi.
+// availableBalance-ə görə azalan sıra — ən çox pulu olan üstdə.
 // ════════════════════════════════════════════════════════════════════════════
 export const getAllSellerBalances = async (req, res) => {
     try {
         const balances = await SellerBalance.find()
             .populate("sellerId", "name email")
-            .sort({ pendingCommission: -1 }); // ən çox gözləyən üstdə
+            .sort({ availableBalance: -1 });
 
-        // Bütün satıcıların gözləyən komisyalarının cəmi —
-        // şirkətin bu ay alacağı ümumi məbləğ
-        const totalPendingCommission = balances.reduce(
-            (s, b) => s + b.pendingCommission, 0
-        );
+        const totalPendingEarning = balances.reduce((s, b) => s + b.pendingEarning,   0);
+        const totalAvailable      = balances.reduce((s, b) => s + b.availableBalance, 0);
+        const totalBrendexEarned  = balances.reduce((s, b) => s + b.totalBrendexCommission, 0);
 
         res.json({
-            success:             true,
-            totalPendingCommission,
-            count:               balances.length,
+            success: true,
+            summary: {
+                totalPendingEarning,   // platformada hələ gözləyən ümumi pul
+                totalAvailable,        // satıcıların çəkə biləcəyi ümumi pul
+                totalBrendexEarned,    // Brendex-in platformada topladığı ümumi komisya
+            },
+            count:    balances.length,
             balances,
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+
+// ════════════════════════════════════════════════════════════════════════════
+//  9. WEBHOOK STATUS YOXLAMA — checkCommissionStatus
+// ────────────────────────────────────────────────────────────────────────────
+// GET /commission/status/:orderId
+//
+// Əgər webhook gecikirsa — frontend polling edə bilər.
+// Satıcı: "Ödənişim gəldimi?" → bu endpoint yoxlayır.
+// ════════════════════════════════════════════════════════════════════════════
+export const checkCommissionStatus = async (req, res) => {
+    try {
+        const commission = await Commission.findOne({ orderId: req.params.orderId });
+
+        if (!commission) {
+            return res.status(404).json({ success: false, message: "Komisya tapılmadı." });
+        }
+
+        res.json({
+            success: true,
+            status:  commission.status,        // "pending" | "settled" | "failed" | "refunded"
+            settledAt:  commission.settledAt,
+            sellerEarning: commission.sellerEarning,
         });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });

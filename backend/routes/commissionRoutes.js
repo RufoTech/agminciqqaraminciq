@@ -1,94 +1,87 @@
-// express — Node.js üçün veb framework.
-import express from "express";
+// ── commissionRouter.js — PashaPay Split-Payment Route-ları ─────────────────
+//
+// app.js-də: app.use("/commission", commissionRouter)
+// Bütün route-lar "/commission/..." ilə başlayır.
+//
+// ⚠️  WEBHOOK XÜSUSIYYƏTI:
+//   /webhook/pashapay route-u FƏRQLI middleware istifadə edir:
+//     express.raw() → İmza yoxlaması üçün raw body lazımdır
+//   Digər route-larda express.json() işləyir.
+//
+//   app.js-də bunu BU SIRADAN YAZIN:
+//     app.use("/commission/webhook", express.raw({ type: "application/json" }));
+//     app.use(express.json());
+//     app.use("/commission", commissionRouter);
+// ─────────────────────────────────────────────────────────────────────────────
 
-// commissionController-dən bütün lazımlı funksiyaları import edirik.
+import express from "express";
 import {
-    getOrderCommission,    // Sifariş üzrə komisya detalları
-    getSellerBalance,      // Satıcının cari balansı
-    getMonthlyCommission,  // Aylıq komisya hesabatı
-    transferCommission,    // Ay sonu komisyanı şirkətə köçür
-    withdrawBalance,       // Satıcı öz qazancını çəkir
-    getAllCommissions,      // Admin — bütün satıcıların komisyaları
-    getAllSellerBalances,   // Admin — bütün satıcıların balansları
+    getOrderCommission,
+    getSellerBalance,
+    getMonthlyCommission,
+    withdrawBalance,
+    getAllCommissions,
+    getAllSellerBalances,
+    handlePashaPayWebhook,
+    checkCommissionStatus,
 } from "../controller/commissionController.js";
 
-// isAuthenticatedUser — JWT token yoxlayır, req.user-ə yazır.
-// isApprovedSeller    — həm role="admin", həm sellerStatus="approved" yoxlayır.
 import { isAuthenticatedUser, isApprovedSeller } from "../middleware/auth.js";
 
-
-// =====================================================================
-// ROUTER YARATMA
-// ---------------------------------------------------------------------
-// app.js-də: app.use("/commission", commissionRouter)
-// → Bütün route-lar "/commission/..." ilə başlayır.
-// =====================================================================
 const router = express.Router();
 
 
-// =====================================================================
-// SATICI ROUTE-LARI
-// ---------------------------------------------------------------------
-// Bütün bu route-lar ikiqat qorunur:
-//   1. isAuthenticatedUser → token var və etibarlıdır?
-//   2. isApprovedSeller    → admin rolundadır + təsdiqlənib?
+// ════════════════════════════════════════════════════════════════════════════
+//  WEBHOOK — PashaPay-dan gəlir (autentifikasiya YOX, imza yoxlaması VAR)
+// ════════════════════════════════════════════════════════════════════════════
+
+// POST /commission/webhook/pashapay
 //
-// Niyə ikiqat qoruma?
-//   isAuthenticatedUser → "kim olduğunu" yoxlayır (autentifikasiya)
-//   isApprovedSeller    → "bu resursa giriş icazəsi varmı?" (avtorizasiya)
-//   Yalnız biri olsaydı:
-//     Yalnız token yoxlanılsaydı → adi User-lər də bu route-lara girib bilərdi.
-//     Yalnız status yoxlanılsaydı → kim olduğu bilinmədən icazə verilərdi.
-// =====================================================================
+// Niyə isAuthenticatedUser yoxdur?
+//   Bu endpoint PashaPay server-i çağırır — istifadəçi deyil.
+//   PashaPay-ın JWT tokeni olmur.
+//   Təhlükəsizlik: controller içindəki HMAC imza yoxlaması ilə qorunur.
+//
+// ⚠️  app.js-də bu route üçün express.raw() lazımdır — yuxarıdakı kommentə bax.
+router.post("/webhook/pashapay", handlePashaPayWebhook);
+
+
+// ════════════════════════════════════════════════════════════════════════════
+//  SATICI ROUTE-LARI (isAuthenticatedUser + isApprovedSeller)
+// ════════════════════════════════════════════════════════════════════════════
 
 // GET /commission/order/:orderId
-// Müəyyən sifarişin komisya detallarını göstərir.
-// Satıcı öz sifarişinin neçə faiz komisya verdiyini görür.
+// Sifariş detallarında komisya bölgüsünü göstər
 router.get("/order/:orderId",    isAuthenticatedUser, isApprovedSeller, getOrderCommission);
 
 // GET /commission/balance/:sellerId
-// Satıcının cari maliyyə vəziyyəti:
-//   availableBalance  → çəkə biləcəyi pul
-//   pendingCommission → şirkətin payı (toxuna bilməz)
+// Satıcının cari balansı: availableBalance, pendingEarning
 router.get("/balance/:sellerId", isAuthenticatedUser, isApprovedSeller, getSellerBalance);
 
 // GET /commission/monthly/:sellerId?month=3&year=2026
-// Satıcının seçilmiş ay üzrə komisya hesabatı.
-// Query parametrləri göndərilməsə → cari ay/il istifadə olunur.
+// Aylıq komisya hesabatı
 router.get("/monthly/:sellerId", isAuthenticatedUser, isApprovedSeller, getMonthlyCommission);
 
-// POST /commission/transfer
-// Ay sonu komisyanı Stripe ilə şirkət hesabına köçürür.
-// Body: { sellerId, sellerName, month, year, paymentMethodId }
-// Niyə POST? Yeni köçürmə əməliyyatı yaradılır — resurs dəyişdirilir.
-router.post("/transfer",         isAuthenticatedUser, isApprovedSeller, transferCommission);
+// GET /commission/status/:orderId
+// Müəyyən sifarişin komisya statusunu yoxla (webhook polling üçün)
+router.get("/status/:orderId",   isAuthenticatedUser, isApprovedSeller, checkCommissionStatus);
 
 // POST /commission/withdraw
-// Satıcı öz availableBalance-indən pul çıxarır.
 // Body: { sellerId, amount }
+// Satıcı availableBalance-ini çıxarır
 router.post("/withdraw",         isAuthenticatedUser, isApprovedSeller, withdrawBalance);
 
 
-// =====================================================================
-// ADMİN/SUPERADMİN ROUTE-LARI
-// ---------------------------------------------------------------------
-// "admin" prefiksi bu route-ların daha geniş icazə tələb etdiyini
-// göstərir — bütün satıcıların məlumatlarını görə bilir.
-//
-// Niyə isApprovedSeller istifadə edilir, isSuperAdmin deyil?
-//   Hazırki kodda superadmin yoxlaması yoxdur — bu route-lar
-//   da təsdiqlənmiş adminlər üçün açıqdır.
-//   Gələcəkdə daha ciddi qoruma üçün isSuperAdmin əlavə edilə bilər.
-// =====================================================================
+// ════════════════════════════════════════════════════════════════════════════
+//  ADMİN ROUTE-LARI
+// ════════════════════════════════════════════════════════════════════════════
 
-// GET /commission/admin/all?month=3&year=2026&status=pending
-// Bütün satıcıların komisya qeydlərini göstərir.
-// Query ilə filter qurula bilər: ay, il, status.
+// GET /commission/admin/all?month=3&year=2026&status=settled&sellerId=X
+// Bütün komisyalar — filter ilə
 router.get("/admin/all",         isAuthenticatedUser, isApprovedSeller, getAllCommissions);
 
 // GET /commission/admin/balances
-// Bütün satıcıların maliyyə vəziyyətini göstərir.
-// pendingCommission-a görə azalan sırada — ən çox borcu olan üstdə.
+// Bütün satıcı balansları
 router.get("/admin/balances",    isAuthenticatedUser, isApprovedSeller, getAllSellerBalances);
 
 
