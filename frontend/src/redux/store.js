@@ -6,7 +6,7 @@ import userSlice from "./features/userSlice";
 import orderReducer from '../slices/orderSlice';
 import commissionReducer from '../slices/commissionSlice';
 import languageReducer from '../slices/languageSlice';
-import notificationReducer from '../slices/Notificationslice'; // ✅ YENİ
+import notificationReducer from '../slices/notificationSlice'; // ✅ YENİ
 
 export const store = configureStore({
   reducer: {

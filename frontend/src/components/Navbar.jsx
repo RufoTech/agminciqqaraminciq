@@ -262,15 +262,17 @@ function NotificationBell({ isMobile = false }) {
   const { t }           = useTranslation()
   const dispatch        = useDispatch()
   const navigate        = useNavigate()
+  const { isAuthenticated } = useSelector((s) => s.userSlice)
   const { unreadCount } = useSelector((s) => s.notifications)
   const [shake, setShake] = useState(false)
   const prevCount         = useRef(unreadCount)
 
-  useEffect(() => { dispatch(fetchUnreadCount()) }, [dispatch])
+  useEffect(() => { if (isAuthenticated) dispatch(fetchUnreadCount()) }, [dispatch, isAuthenticated])
   useEffect(() => {
+    if (!isAuthenticated) return
     const id = setInterval(() => dispatch(fetchUnreadCount()), 30000)
     return () => clearInterval(id)
-  }, [dispatch])
+  }, [dispatch, isAuthenticated])
   useEffect(() => {
     if (unreadCount > prevCount.current) { setShake(true); setTimeout(() => setShake(false), 600) }
     prevCount.current = unreadCount
@@ -597,8 +599,8 @@ const Navbar = () => {
   const handleCategorySelect   = cat => { setIsCategoryOpen(false); setIsMenuOpen(false); cat.slug ? setActiveCatPanel(cat) : navigate("/shop") }
   const handleCategoryNavigate = cat => { setActiveCatPanel(null); navigate(cat.slug ? `/shop?category=${cat.slug}` : "/shop") }
 
-  const { data:cartData,     isLoading:cartLd, error:cartErr } = useGetCartQuery()
-  const { data:favoriteData, isLoading:favLd,  error:favErr  } = useGetFavoritesQuery()
+  const { data:cartData,     isLoading:cartLd, error:cartErr } = useGetCartQuery(undefined, { skip: !isAuthenticated })
+  const { data:favoriteData, isLoading:favLd,  error:favErr  } = useGetFavoritesQuery(undefined, { skip: !isAuthenticated })
   const cartCount = (!cartErr && !cartLd && cartData?.cart)          ? cartData.cart.length          : 0
   const favCount  = (!favErr  && !favLd  && favoriteData?.favorites) ? favoriteData.favorites.length : 0
 

@@ -101,7 +101,8 @@ const PaymentComponent = () => {
     const navigate = useNavigate();
 
     const { loading, clientSecret, error } = useSelector((state) => state.payment);
-    const { data: cartData, isLoading: isCartLoading } = useGetCartQuery();
+    const { isAuthenticated } = useSelector((state) => state.userSlice);
+    const { data: cartData, isLoading: isCartLoading } = useGetCartQuery(undefined, { skip: !isAuthenticated });
 
     const [currency, setCurrency] = useState("azn");
     const orderCreatedRef = useRef(false);

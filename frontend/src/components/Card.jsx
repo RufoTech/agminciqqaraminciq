@@ -2,6 +2,7 @@
 // useEffect — komponentin lifecycle-ını idarə etmək üçün istifadə olunur.
 // Burada xəta baş verdikdə toast bildirişi göstərmək üçün lazımdır.
 import React, { useEffect } from 'react';
+import { useSelector } from 'react-redux';
 
 // ProductCard — hər bir məhsulu kart şəklində göstərən ayrı komponent.
 // Bu komponent məhsulun şəklini, adını, qiymətini və s. render edir.
@@ -32,7 +33,8 @@ const Card = () => {
   //   error   — sorğu uğursuz olarsa xəta obyekti
   //   isError — xəta olub-olmadığını göstərən boolean dəyər
   //   refetch — səbəti yenidən serverdən yükləmək üçün funksiya
-  const { data, error, isError, refetch } = useGetCartQuery();
+  const { isAuthenticated } = useSelector((state) => state.userSlice);
+  const { data, error, isError, refetch } = useGetCartQuery(undefined, { skip: !isAuthenticated });
 
 
   // ============================================================

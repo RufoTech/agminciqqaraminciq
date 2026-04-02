@@ -49,7 +49,7 @@ const CommissionPage = () => {
 
   useEffect(() => {
     if (transferResult?.receiptUrl) {
-      window.open(`https://amdulraxim-production.up.railway.app${transferResult.receiptUrl}`, "_blank");
+      window.open(`https://agminciqqaraminciq-production.up.railway.app${transferResult.receiptUrl}`, "_blank");
       if (sellerId) {
         dispatch(getMonthlyCommission({ sellerId, month, year }));
       }

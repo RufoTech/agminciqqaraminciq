@@ -2,8 +2,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 export const productApi = createApi({
   reducerPath: "productApi",
-  baseQuery: fetchBaseQuery({ baseUrl: "https://amdulraxim-production.up.railway.app/commerce/mehsullar" }),
-      credentials: 'include',  // ✅ bunu əlavə et
+  baseQuery: fetchBaseQuery({ baseUrl: "https://agminciqqaraminciq-production.up.railway.app/commerce/mehsullar", credentials: "include" }),
   tagTypes: ['Cart', 'Favorites', 'Products', 'Reviews'],
   endpoints: (builder) => ({
 

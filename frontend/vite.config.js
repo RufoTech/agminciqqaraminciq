@@ -9,7 +9,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/commerce': {
-        target: 'https://amdulraxim-production.up.railway.app/', // Backend serverinizin URL-si
+        target: 'https://agminciqqaraminciq-production.up.railway.app/', // Backend serverinizin URL-si
         changeOrigin: true,
       },
       alias: {

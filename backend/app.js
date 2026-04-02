@@ -99,8 +99,12 @@ connectDatabase();
 //   icazə verir. Bu olmasa token cookie-si frontend-ə çatmaz.
 //   Frontend-də də: axios.defaults.withCredentials = true olmalıdır.
 app.use(cors({
-    origin:      [process.env.CLIENT_URL || "http://localhost:5173", "http://localhost:5173"],
-    methods:     ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    origin: [
+        process.env.CLIENT_URL,
+        "http://localhost:5173",
+        "https://brandexa.netlify.app"
+    ].filter(Boolean),
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     credentials: true,
 }));
 

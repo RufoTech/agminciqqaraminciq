@@ -1,7 +1,7 @@
 // store/slices/notificationSlice.js
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
-const BASE = "https://amdulraxim-production.up.railway.app/commerce/mehsullar/notifications";
+const BASE = "https://agminciqqaraminciq-production.up.railway.app/commerce/mehsullar/notifications";
 
 const apiFetch = (url, options = {}) =>
     fetch(url, { credentials: "include", ...options }).then(async (r) => {

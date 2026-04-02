@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "proxy": "https://amdulraxim-production.up.railway.app",
+  "proxy": "https://agminciqqaraminciq-production.up.railway.app",
   "private": true,
   "version": "0.0.0",
   "type": "module",
