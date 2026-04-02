@@ -92,15 +92,15 @@ function AppContent() {
 }
 
 function App() {
-  const [splashDone, setSplashDone] = useState(false)  // ✅ YENİ
+  const [splashDone, setSplashDone] = useState(false)
 
   return (
     <BrowserRouter>
       <Toaster position='top-center' />
-      {!splashDone
-        ? <SplashScreen onFinish={() => setSplashDone(true)} />  // ✅ YENİ
-        : <AppContent />
-      }
+      <AppContent />
+      {!splashDone && (
+        <SplashScreen onFinish={() => setSplashDone(true)} />
+      )}
     </BrowserRouter>
   );
 }

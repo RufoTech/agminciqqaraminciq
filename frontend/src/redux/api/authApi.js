@@ -3,14 +3,14 @@ import { setIsAuthenticated, setUser, logout } from "../features/userSlice.js";
 
 export const authApi = createApi({
     reducerPath: "authApi",
-    baseQuery: fetchBaseQuery({ baseUrl: "https://amdulraxim-production.up.railway.app/commerce/mehsullar", credentials: "include" }),
+    baseQuery: fetchBaseQuery({ baseUrl: "https://agminciqqaraminciq-production.up.railway.app/commerce/mehsullar", credentials: "include" }),
     endpoints: (builder) => ({
 
         // ── Qeydiyyat ──
         register: builder.mutation({
             query(body) {
                 return {
-                    url: "/register",
+                    url: "register",
                     method: "POST",
                     body,
                 };
@@ -30,7 +30,7 @@ export const authApi = createApi({
         login: builder.mutation({
             query(body) {
                 return {
-                    url: "/login",
+                    url: "login",
                     method: "POST",
                     body,
                 };
@@ -48,13 +48,13 @@ export const authApi = createApi({
 
         // ── Çıxış ──
         logout: builder.query({
-            query: () => "/logout",
+            query: () => "logout",
         }),
 
         // ── Şifrəni sıfırla ──
         resetPassword: builder.mutation({
             query: ({ token, password, confirmPassword }) => ({
-                url: `/password/reset/${token}`,
+                url: `password/reset/${token}`,
                 method: "PUT",
                 body: { password, confirmPassword },
             }),
@@ -65,7 +65,7 @@ export const authApi = createApi({
             query: (body) => {
                 console.log("Sending forgot password request", body);
                 return {
-                    url: "/password/forgot",
+                    url: "password/forgot",
                     method: "POST",
                     body,
                 };
@@ -84,7 +84,7 @@ export const authApi = createApi({
         // ── MAĞAZA PROFİLİ — slug ilə ──
         // ════════════════════════════════════════════════════
         getStoreBySlug: builder.query({
-            query: (slug) => `/store/${slug}`,
+            query: (slug) => `store/${slug}`,
         }),
 
     }),
