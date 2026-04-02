@@ -59,6 +59,10 @@ import { notifyNewUser } from "../utils/notificationHelper.js";
 //     — sellerInfo cavabda olur → AdminProducts, AddProduct düzgün işləyir
 // =====================================================================
 export const registerUser = catchAsyncErrors(async (req, res, next) => {
+    // === DEBUG LOGGING START ===
+    console.log("=== REGISTRATION DATA RECEIVED ===");
+    console.log("Body:", { ...req.body, password: "SECRET_MASKED" }); // Şifrəni göstərmirik
+    // === DEBUG LOGGING END ===
 
     // req.body-dən gələn bütün sahələri çıxarırıq.
     // Admin üçün əlavə sahələr: storeName, storeAddress, phone, taxNumber, vonNumber
@@ -76,6 +80,7 @@ export const registerUser = catchAsyncErrors(async (req, res, next) => {
 
     // ── ADMIN QEYDİYYATI ──────────────────────────────────────────────
     if (role === "admin") {
+        console.log("Processing ADMIN registration...");
 
         // Admin qeydiyyatında bütün sahələrin dolu olması məcburidir.
         // Hansı sahənin boş olduğunu dəqiq göstərmək üçün missingFields
@@ -88,8 +93,9 @@ export const registerUser = catchAsyncErrors(async (req, res, next) => {
         if (!vonNumber?.trim())    missingFields.push("VÖN nömrəsi (vonNumber)");
 
         // Hər hansı sahə çatışmırsa — 400 (Bad Request) xətası qaytarılır
-        // və funksiya dayandırılır (return next ilə).
+        // va funksiya dayandırılır (return next ilə).
         if (missingFields.length > 0) {
+            console.log("Admin validation failed:", missingFields);
             return next(new ErrorHandler(
                 `Admin qeydiyyatı üçün aşağıdakı məlumatlar əksikdir: ${missingFields.join(", ")}`,
                 400
@@ -98,15 +104,6 @@ export const registerUser = catchAsyncErrors(async (req, res, next) => {
 
         // ── SLUG YARATMA ──────────────────────────────────────────────
         // Mağaza adından URL-uyğun unikal link yaradılır.
-        // Məsələn: "Gülün Mağazası" → "gulun-magazasi-4823"
-        //
-        // Addımlar:
-        //   .toLowerCase()          → böyük hərfləri kiçildilir
-        //   .replace(/\s+/g, "-")   → boşluqlar tire ilə əvəzlənir
-        //   .replace(/[^\w\-]+/g,"")→ xüsusi simvollar (?, !, @ və s.) silinir
-        //   .replace(/\-\-+/g, "-") → ardıcıl tirelər tək tirəyə endirilir
-        //   + Math.random()         → eyni adlı mağazalar fərqlənsin deyə
-        //                            sona 4 rəqəmli təsadüfi ədəd əlavə olunur
         const generateSlug = (text) => {
             return text
                 .toString()
@@ -118,11 +115,10 @@ export const registerUser = catchAsyncErrors(async (req, res, next) => {
                 + "-" + Math.floor(Math.random() * 10000);
         };
         const storeSlug = generateSlug(storeName);
+        console.log("Generated store slug:", storeSlug);
 
         // Admin.create() — "admins" kolleksiyasına yeni sənəd əlavə edir.
-        // User.create() istifadə edilmir — çünki admin ayrı modeldədir.
-        // sellerStatus: "approved" — admin dərhal aktiv olur, təsdiq gözləmir.
-        // sellerInfo — mağazaya aid bütün məlumatlar bu alt-obyektdə saxlanılır.
+        console.log("Creating ADMIN in MongoDB...");
         const user = await Admin.create({
             name,
             email,
@@ -137,27 +133,11 @@ export const registerUser = catchAsyncErrors(async (req, res, next) => {
                 vonNumber:    vonNumber.trim(),
             },
         });
+        console.log("Admin created successfully:", user._id);
 
-        // Mağazanın ictimai linki — bu link müştərilərə paylaşıla bilər.
-        // Məsələn: http://localhost:3010/store/gulun-magazasi-4823
         const storeLink = `${process.env.FRONTEND_URL}/store/${storeSlug}`;
 
-        // ── ƏSAS DƏYİŞİKLİK ──────────────────────────────────────────
-        // Əvvəl: res.status(201).json({...}) — manual cavab, cookie YOX idi.
-        // İndi: sendToken(user, 201, res, { storeLink, storeSlug })
-        //
-        // sendToken nə edir?
-        //   1. JWT token yaradır (jwtTokeniEldeEt())
-        //   2. Cookie-yə yazır → sonrakı admin sorğuları autentifikasiyalı olur
-        //   3. Cavabda user obyekti göndərir — sellerInfo daxil olmaqla
-        //   4. extraData = { storeLink, storeSlug } → cavaba əlavə edilir
-        //      Register.jsx storeLink-i göstərmək üçün bu sahəni oxuyur
-        //
-        // Bu dəyişiklik sayəsində:
-        //   — Register sonrası admin dərhal autentifikasiyalı sayılır
-        //   — authApi onQueryStarted-da dispatch(setUser({ user: data.user })) işləyir
-        //   — data.user artıq sellerInfo-nu da ehtiva edir
-        //   — AdminProducts, AddProduct login/register fərqi olmadan işləyir
+        console.log("Sending token to ADMIN...");
         return sendToken(user, 201, res, {
             message:   "Admin qeydiyyatı uğurla tamamlandı",
             storeLink,
@@ -166,21 +146,20 @@ export const registerUser = catchAsyncErrors(async (req, res, next) => {
     }
 
     // ── ADİ İSTİFADƏÇİ QEYDİYYATI ────────────────────────────────────
-    // role = "admin" deyilsə bu hissə işləyir.
-    // Yalnız əsas məlumatlar saxlanılır, role məcburən "user" təyin edilir —
-    // istifadəçi özü özünə "admin" rolu verə bilməsin deyə.
+    console.log("Processing REGULAR USER registration...");
     const user = await User.create({
         name,
         email,
         password,
         role: "user",
     });
+    console.log("User created successfully:", user._id);
 
     // Yeni istifadəçi qeydiyyat etdikdə adminlərə bildiriş göndərilir.
-    // Bu, adminlərin sistemi izləməsi üçün faydalıdır.
+    console.log("Sending notification for new user...");
     await notifyNewUser({ userName: user.name, userEmail: user.email });
 
-    // JWT token yaradılır və cookie-yə yazılır — istifadəçi dərhal daxil olmuş sayılır.
+    console.log("Sending token to USER...");
     sendToken(user, 201, res);
 });
 

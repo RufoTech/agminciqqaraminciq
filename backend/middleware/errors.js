@@ -23,6 +23,10 @@ import ErrorHandler from "../utils/errorHandler.js";
 //   Bu, bütün tətbiqdəki xətaları bir yerdən idarə etməyə imkan verir.
 // =====================================================================
 export default (err, req, res, next) => {
+    // Server loglarında xətanın tam təfərrüatını görmək üçün (Railway logları üçün vacibdir)
+    console.error("=== SERVER ERROR LOG START ===");
+    console.error(err);
+    console.error("=== SERVER ERROR LOG END ===");
 
     // ── İLKİN DƏYƏRLƏR ──────────────────────────────────────────────
     // err.statusCode — ErrorHandler ilə atılmış xətalarda mövcuddur (məs: 400, 404).
