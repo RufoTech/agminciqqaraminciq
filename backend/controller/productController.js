@@ -41,6 +41,49 @@ import {
     AutoAccessories, AutoElectronics, SpareParts, AutoChemicals,
     // 15. Hədiyyələr və lifestyle
     GiftSets, Souvenirs, TrendingProducts, BooksHobbies,
+    // ── YENİ FRONTEND DİSCRİMİNATORLARI ──────────────────────────
+    // 1. Elektronika
+    Electronics_TV, Electronics_Photo, Electronics_Console,
+    Electronics_SmartHome, Electronics_Gadgets, Electronics_Acc,
+    // 2. Telefonlar
+    Phones_Smartphone, Phones_Basic, Phones_Headphones,
+    Phones_Cables, Phones_Powerbank, Phones_Acc,
+    // 3. Kompüter
+    Computers_Laptop, Computers_Desktop, Computers_Monitor,
+    Computers_Printer, Computers_OfficeAcc, Computers_Parts,
+    // 4. Məişət texnikası
+    HomeAppliances_Large, HomeAppliances_Small, HomeAppliances_Kitchen,
+    HomeAppliances_Climate, HomeAppliances_Water,
+    // 5. Ev və dekor
+    HomeDecor_Deco, HomeDecor_Light, HomeDecor_Textile,
+    HomeDecor_Kitchen, HomeDecor_Bath,
+    // 6. Mebel
+    Furniture_Living, Furniture_Bedroom, Furniture_Kitchen,
+    Furniture_Office, Furniture_Garden,
+    // 7. Qadın geyimi
+    WomenClothing_Outer, WomenClothing_Inner, WomenClothing_Casual,
+    WomenClothing_Sport, WomenClothing_Formal, WomenClothing_Under,
+    // 8. Kişi geyimi
+    MenClothing_Outer, MenClothing_Inner, MenClothing_Casual,
+    MenClothing_Sport, MenClothing_Formal, MenClothing_Under,
+    // 9. Ayaqqabı
+    Shoes_Sport, Shoes_Classic, Shoes_Casual, Shoes_Sandal,
+    // 10. Aksesuarlar
+    Accessories_Bag, Accessories_Watch, Accessories_Sunglasses,
+    Accessories_Jewelry, Accessories_Belt,
+    // 11. Gözəllik
+    Beauty_Makeup, Beauty_Skin, Beauty_Hair,
+    Beauty_Perfume, Beauty_Men, Beauty_Hygiene,
+    // 12. Uşaq və ana
+    KidsAndMom_Clothing, KidsAndMom_Toys, KidsAndMom_Stroller,
+    KidsAndMom_Food, KidsAndMom_School,
+    // 13. İdman
+    Sports_Fitness, Sports_Camping, Sports_Bicycle,
+    Sports_Clothing, Sports_Acc,
+    // 14. Avto
+    Automotive_Acc, Automotive_Electronics, Automotive_Parts, Automotive_Oils,
+    // 15. Hədiyyə
+    Gifts_Sets, Gifts_Souvenir, Gifts_Trending, Gifts_Books,
 } from "../model/Product.js";
 
 import { notifyFavoritePriceChange } from "../utils/notificationHelper.js";
@@ -50,7 +93,7 @@ import { notifyFavoritePriceChange } from "../utils/notificationHelper.js";
 // KATEQORİYA → MODEL XƏRİTƏSİ
 // =====================================================================
 const categoryModels = {
-    // Legacy kateqoriyalar
+    // ── Legacy kateqoriyalar ──────────────────────────────────────
     Phones:         Phone,
     Laptops:        Laptop,
     Cameras:        Camera,
@@ -66,7 +109,7 @@ const categoryModels = {
     Sports:         Sports,
     Automotive:     Automotive,
 
-    // 1. Elektronika
+    // 1. Elektronika (köhnə flat)
     TVs:                    TVs,
     AudioSystems:           AudioSystems,
     PhotoVideo:             PhotoVideo,
@@ -75,7 +118,7 @@ const categoryModels = {
     Gadgets:                Gadgets,
     ElectronicsAccessories: ElectronicsAccessories,
 
-    // 2. Telefonlar və aksesuarlar
+    // 2. Telefonlar və aksesuarlar (köhnə flat)
     Smartphones:      Smartphones,
     FeaturePhones:    FeaturePhones,
     HeadphonesNew:    HeadphonesNew,
@@ -83,7 +126,7 @@ const categoryModels = {
     Powerbanks:       Powerbanks,
     PhoneAccessories: PhoneAccessories,
 
-    // 3. Kompüter və ofis
+    // 3. Kompüter və ofis (köhnə flat)
     LaptopsNew:        LaptopsNew,
     Desktops:          Desktops,
     Monitors:          Monitors,
@@ -91,89 +134,89 @@ const categoryModels = {
     OfficeAccessories: OfficeAccessories,
     Components:        Components,
 
-    // 4. Məişət texnikası
+    // 4. Məişət texnikası (köhnə flat)
     LargeAppliances:   LargeAppliances,
     SmallAppliances:   SmallAppliances,
     KitchenAppliances: KitchenAppliances,
     AirConditioners:   AirConditioners,
     WaterHeaters:      WaterHeaters,
 
-    // 5. Ev və dekor
-    HomeDecor:      HomeDecor,
-    Lighting:       Lighting,
-    HomeTextiles:   HomeTextiles,
-    Kitchenware:    Kitchenware,
-    BathAccessories:BathAccessories,
+    // 5. Ev və dekor (köhnə flat)
+    HomeDecor:       HomeDecor,
+    Lighting:        Lighting,
+    HomeTextiles:    HomeTextiles,
+    Kitchenware:     Kitchenware,
+    BathAccessories: BathAccessories,
 
-    // 6. Mebel
+    // 6. Mebel (köhnə flat)
     LivingRoomFurniture: LivingRoomFurniture,
     BedroomFurniture:    BedroomFurniture,
     KitchenFurniture:    KitchenFurniture,
     OfficeFurniture:     OfficeFurniture,
     GardenFurniture:     GardenFurniture,
 
-    // 7. Qadın geyimləri
-    WomensTops:     WomensTops,
-    WomensBottoms:  WomensBottoms,
-    WomensCasual:   WomensCasual,
-    WomensSport:    WomensSport,
-    WomensFormal:   WomensFormal,
-    WomensUnderwear:WomensUnderwear,
+    // 7. Qadın geyimləri (köhnə flat)
+    WomensTops:      WomensTops,
+    WomensBottoms:   WomensBottoms,
+    WomensCasual:    WomensCasual,
+    WomensSport:     WomensSport,
+    WomensFormal:    WomensFormal,
+    WomensUnderwear: WomensUnderwear,
 
-    // 8. Kişi geyimləri
-    MensTops:     MensTops,
-    MensBottoms:  MensBottoms,
-    MensCasual:   MensCasual,
-    MensSport:    MensSport,
-    MensFormal:   MensFormal,
-    MensUnderwear:MensUnderwear,
+    // 8. Kişi geyimləri (köhnə flat)
+    MensTops:      MensTops,
+    MensBottoms:   MensBottoms,
+    MensCasual:    MensCasual,
+    MensSport:     MensSport,
+    MensFormal:    MensFormal,
+    MensUnderwear: MensUnderwear,
 
-    // 9. Ayaqqabı
+    // 9. Ayaqqabı (köhnə flat)
     SportsShoes:  SportsShoes,
     ClassicShoes: ClassicShoes,
     CasualShoes:  CasualShoes,
     Sandals:      Sandals,
 
-    // 10. Aksesuarlar
+    // 10. Aksesuarlar (köhnə flat)
     Bags:       Bags,
     Watches:    Watches,
     Sunglasses: Sunglasses,
     Jewelry:    Jewelry,
     Belts:      Belts,
 
-    // 11. Gözəllik və kosmetika
-    Makeup:     Makeup,
-    Skincare:   Skincare,
-    HairCare:   HairCare,
-    Fragrance:  Fragrance,
-    MenGrooming:MenGrooming,
-    Hygiene:    Hygiene,
+    // 11. Gözəllik və kosmetika (köhnə flat)
+    Makeup:      Makeup,
+    Skincare:    Skincare,
+    HairCare:    HairCare,
+    Fragrance:   Fragrance,
+    MenGrooming: MenGrooming,
+    Hygiene:     Hygiene,
 
-    // 12. Uşaq və ana
+    // 12. Uşaq və ana (köhnə flat)
     KidsClothingNew: KidsClothingNew,
     Toys:            Toys,
     Strollers:       Strollers,
     BabyFeeding:     BabyFeeding,
     SchoolSupplies:  SchoolSupplies,
 
-    // 13. İdman və outdoor
+    // 13. İdman və outdoor (köhnə flat)
     FitnessEquipment:  FitnessEquipment,
     Camping:           Camping,
     Bicycles:          Bicycles,
     SportsApparel:     SportsApparel,
     SportsAccessories: SportsAccessories,
 
-    // 14. Avto məhsullar
+    // 14. Avto məhsullar (köhnə flat)
     AutoAccessories:  AutoAccessories,
     AutoElectronics:  AutoElectronics,
     SpareParts:       SpareParts,
     AutoChemicals:    AutoChemicals,
 
-    // 15. Hədiyyələr və lifestyle
-    GiftSets:        GiftSets,
-    Souvenirs:       Souvenirs,
-    TrendingProducts:TrendingProducts,
-    BooksHobbies:    BooksHobbies,
+    // 15. Hədiyyələr və lifestyle (köhnə flat)
+    GiftSets:         GiftSets,
+    Souvenirs:        Souvenirs,
+    TrendingProducts: TrendingProducts,
+    BooksHobbies:     BooksHobbies,
 
     // Parent (əsas) kateqoriyalar — ümumi Product modeli istifadə edir
     "Elektronika":                  Product,
@@ -191,6 +234,118 @@ const categoryModels = {
     "Idman ve outdoor":             Product,
     "Avto mehsullar":               Product,
     "Hediyyeler ve lifestyle":      Product,
+
+    // ── YENİ FRONTEND KATEQORİYA → MODEL MAPPING ─────────────────
+    // Frontend AddProduct.jsx-dən "Phones_Smartphone", "Electronics_TV"
+    // və s. kimi dəyərlər gəlir. Bunlar aşağıda uyğun modelə map edilir.
+
+    // 1. Elektronika
+    "Electronics_TV":          Electronics_TV,
+    "Electronics_Photo":       Electronics_Photo,
+    "Electronics_Console":     Electronics_Console,
+    "Electronics_SmartHome":   Electronics_SmartHome,
+    "Electronics_Gadgets":     Electronics_Gadgets,
+    "Electronics_Acc":         Electronics_Acc,
+
+    // 2. Telefonlar
+    "Phones_Smartphone":       Phones_Smartphone,
+    "Phones_Basic":            Phones_Basic,
+    "Phones_Headphones":       Phones_Headphones,
+    "Phones_Cables":           Phones_Cables,
+    "Phones_Powerbank":        Phones_Powerbank,
+    "Phones_Acc":              Phones_Acc,
+
+    // 3. Kompüter
+    "Computers_Laptop":        Computers_Laptop,
+    "Computers_Desktop":       Computers_Desktop,
+    "Computers_Monitor":       Computers_Monitor,
+    "Computers_Printer":       Computers_Printer,
+    "Computers_OfficeAcc":     Computers_OfficeAcc,
+    "Computers_Parts":         Computers_Parts,
+
+    // 4. Məişət texnikası
+    "HomeAppliances_Large":    HomeAppliances_Large,
+    "HomeAppliances_Small":    HomeAppliances_Small,
+    "HomeAppliances_Kitchen":  HomeAppliances_Kitchen,
+    "HomeAppliances_Climate":  HomeAppliances_Climate,
+    "HomeAppliances_Water":    HomeAppliances_Water,
+
+    // 5. Ev və dekor
+    "HomeDecor_Deco":          HomeDecor_Deco,
+    "HomeDecor_Light":         HomeDecor_Light,
+    "HomeDecor_Textile":       HomeDecor_Textile,
+    "HomeDecor_Kitchen":       HomeDecor_Kitchen,
+    "HomeDecor_Bath":          HomeDecor_Bath,
+
+    // 6. Mebel
+    "Furniture_Living":        Furniture_Living,
+    "Furniture_Bedroom":       Furniture_Bedroom,
+    "Furniture_Kitchen":       Furniture_Kitchen,
+    "Furniture_Office":        Furniture_Office,
+    "Furniture_Garden":        Furniture_Garden,
+
+    // 7. Qadın geyimi
+    "WomenClothing_Outer":     WomenClothing_Outer,
+    "WomenClothing_Inner":     WomenClothing_Inner,
+    "WomenClothing_Casual":    WomenClothing_Casual,
+    "WomenClothing_Sport":     WomenClothing_Sport,
+    "WomenClothing_Formal":    WomenClothing_Formal,
+    "WomenClothing_Under":     WomenClothing_Under,
+
+    // 8. Kişi geyimi
+    "MenClothing_Outer":       MenClothing_Outer,
+    "MenClothing_Inner":       MenClothing_Inner,
+    "MenClothing_Casual":      MenClothing_Casual,
+    "MenClothing_Sport":       MenClothing_Sport,
+    "MenClothing_Formal":      MenClothing_Formal,
+    "MenClothing_Under":       MenClothing_Under,
+
+    // 9. Ayaqqabı
+    "Shoes_Sport":             Shoes_Sport,
+    "Shoes_Classic":           Shoes_Classic,
+    "Shoes_Casual":            Shoes_Casual,
+    "Shoes_Sandal":            Shoes_Sandal,
+
+    // 10. Aksesuarlar
+    "Accessories_Bag":         Accessories_Bag,
+    "Accessories_Watch":       Accessories_Watch,
+    "Accessories_Sunglasses":  Accessories_Sunglasses,
+    "Accessories_Jewelry":     Accessories_Jewelry,
+    "Accessories_Belt":        Accessories_Belt,
+
+    // 11. Gözəllik
+    "Beauty_Makeup":           Beauty_Makeup,
+    "Beauty_Skin":             Beauty_Skin,
+    "Beauty_Hair":             Beauty_Hair,
+    "Beauty_Perfume":          Beauty_Perfume,
+    "Beauty_Men":              Beauty_Men,
+    "Beauty_Hygiene":          Beauty_Hygiene,
+
+    // 12. Uşaq və ana
+    "KidsAndMom_Clothing":     KidsAndMom_Clothing,
+    "KidsAndMom_Toys":         KidsAndMom_Toys,
+    "KidsAndMom_Stroller":     KidsAndMom_Stroller,
+    "KidsAndMom_Food":         KidsAndMom_Food,
+    "KidsAndMom_School":       KidsAndMom_School,
+
+    // 13. İdman
+    "Sports_Fitness":          Sports_Fitness,
+    "Sports_Camping":          Sports_Camping,
+    "Sports_Bicycle":          Sports_Bicycle,
+    "Sports_Clothing":         Sports_Clothing,
+    "Sports_Acc":              Sports_Acc,
+
+    // 14. Avto
+    "Automotive_Acc":          Automotive_Acc,
+    "Automotive_Electronics":  Automotive_Electronics,
+    "Automotive_Parts":        Automotive_Parts,
+    "Automotive_Oils":         Automotive_Oils,
+
+    // 15. Hədiyyə
+    "Gifts_Sets":              Gifts_Sets,
+    "Gifts_Souvenir":          Gifts_Souvenir,
+    "Gifts_Trending":          Gifts_Trending,
+    "Gifts_Books":             Gifts_Books,
 };
 
 const booleanFieldNames = ["controllerIncluded", "cellular"];
