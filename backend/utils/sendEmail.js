@@ -17,7 +17,7 @@ import nodemailer from "nodemailer";
 //
 // SMTP nədir?
 //   Simple Mail Transfer Protocol — email göndərmək üçün standart protokol.
-//   Sandart portlar:
+//   Standart portlar:
 //     25   → köhnə, adətən bloklanır
 //     587  → müasir, şifrələnmiş (STARTTLS)
 //     465  → SSL/TLS
@@ -49,24 +49,29 @@ export const sendEmail = async (options) => {
 
 
     // ── EMAİL MƏZMUNUNu HAZIRLA ─────────────────────────────────────
-    // from — göndərənin görünüşü: "noreply@murad.com <Ecommerce>"
-    //   Formatı: "email <ad>" — email müştərisi adı göstərir:
-    //   Gelen: Ecommerce (noreply@murad.com)
+    // from — göndərənin görünüşü.
     //
-    // Qeyd: from-da sıra tərsinədir:
-    //   process.env.SMTP_FROM_EMAIL → "noreply@murad.com"
-    //   process.env.SMTP_FROM_NAME  → "Ecommerce"
-    //   Standart format: "Ad <email>" olmalıdır.
-    //   Burada: "email <ad>" — bu, texniki baxımdan yanlışdır,
-    //   amma Mailtrap test mühitindəki görüntüyü dəyişmir.
-    //   İstehsal mühiti üçün: `${SMTP_FROM_NAME} <${SMTP_FROM_EMAIL}>`
+    // DƏYİŞİKLİK: Əvvəlki kod yanlış idi:
+    //   Köhnə: `${process.env.SMTP_FROM_EMAIL} <${process.env.SMTP_FROM_NAME}>`
+    //          → "noreply@murad.com <Ecommerce>" formatı standart deyil.
+    //            Email client-lər bunu düzgün parse edə bilmir:
+    //            bəzən spam qovluğuna düşür, bəzən "göndərən" adı əvəzinə
+    //            email ünvanı göstərilir. Bəzi SMTP serverlər isə
+    //            yanlış format üzündən emaili ümumiyyətlə göndərmir —
+    //            bu da "şifrəni unutdum" bölməsinin 404/500 xətası verməsinə
+    //            səbəb olurdu.
+    //
+    //   Yeni: `${process.env.SMTP_FROM_NAME} <${process.env.SMTP_FROM_EMAIL}>`
+    //         → "Ecommerce <noreply@murad.com>" — standart RFC 5322 formatı.
+    //           Email client-lər "Ecommerce" adını göstərir.
+    //           Bütün SMTP serverlər bu formatı qəbul edir.
     //
     // to      → alıcının email ünvanı (istifadəçinin email-i)
     // subject → emailin başlığı: "Şifrənin sıfırlanması mərhələsi"
     // html    → emailin tam HTML məzmunu (emailTemplates.js-dən gəlir)
     //           Düz mətn (text) deyil, HTML — şəkilli, düyməli email
     const message = {
-        from:    `${process.env.SMTP_FROM_EMAIL} <${process.env.SMTP_FROM_NAME}>`,
+        from:    `${process.env.SMTP_FROM_NAME} <${process.env.SMTP_FROM_EMAIL}>`,
         to:      options.email,
         subject: options.subject,
         html:    options.message,

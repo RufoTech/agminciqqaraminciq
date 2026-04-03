@@ -10,7 +10,7 @@ import ErrorHandler from "../utils/errorHandler.js";
 // jwt.verify() — token-in doğruluğunu yoxlayır və içindəki məlumatları çıxarır.
 import jwt from "jsonwebtoken";
 
-// User — adi istifadəçi modeli ("users" kolleksiyası).
+// User — adi istifadəçi modeli ("users" kolleksiyası)
 import User from "../model/User.js";
 
 // Admin — satıcı/admin modeli ("admins" kolleksiyası).
@@ -34,6 +34,12 @@ import Admin from "../model/Admin.js";
 //   Cookie → brauzerdə işləyən frontend üçün (veb tətbiq)
 //   Authorization header → Postman, mobil tətbiq, API client-lər üçün
 //   İkisi birlikdə olduqunda cookie üstünlük qazanır (?. short-circuit).
+//
+// DƏYİŞİKLİK: Token yoxluğu ayrıca yoxlanır — əvvəl token yox idi,
+//   jwt.verify() xəta atırdı, catch "Girish etmelisen" deyirdi.
+//   İndi token yoxdursa daha aydın mesaj verilir.
+//   Həmçinin Authorization header "Bearer " olmadan gəlsə də düzgün işlənir.
+//   TokenExpiredError və JsonWebTokenError ayrıca tutulur.
 // =====================================================================
 export const isAuthenticatedUser = catchAsyncErrors(async (req, res, next) => {
 
@@ -46,7 +52,28 @@ export const isAuthenticatedUser = catchAsyncErrors(async (req, res, next) => {
     //   cookies, headers və ya authorization mövcud olmaya bilər —
     //   birbaşa daxil olmaq TypeError atar. ?. null/undefined halında
     //   xəta vermək əvəzinə undefined qaytarır.
-    const token = req?.cookies?.token || req?.headers?.authorization?.split(" ")[1];
+    let token = null;
+
+    if (req.cookies && req.cookies.token) {
+        // Cookie-dən oxu (brauzer / frontend üçün)
+        token = req.cookies.token;
+    } else if (req.headers.authorization) {
+        const authHeader = req.headers.authorization;
+        if (authHeader.startsWith("Bearer ")) {
+            // "Bearer TOKEN" formatı — "Bearer " hissəsini kəs
+            token = authHeader.split(" ")[1];
+        } else {
+            // Bəzən "Bearer " olmadan birbaşa token göndərilir
+            token = authHeader;
+        }
+    }
+
+    // DƏYİŞİKLİK: Token yoxdursa aydın mesajla 401 qaytar.
+    // Əvvəl bu yoxlama yox idi — token undefined olaraq jwt.verify()-ə
+    // gedirdi, xəta catch blokunda ümumi mesajla örtülürdü.
+    if (!token) {
+        return next(new ErrorHandler("Giriş tələb olunur. Zəhmət olmasa daxil olun.", 401));
+    }
 
     try {
         // ── TOKEN YOXLAMASI ──────────────────────────────────────────
@@ -89,7 +116,7 @@ export const isAuthenticatedUser = catchAsyncErrors(async (req, res, next) => {
         // "Cannot read properties of null" xətası yaranır və server 500 qaytarır.
         // Bu yoxlama ilə düzgün 401 xətası göndərilir.
         if (!req.user) {
-            return next(new ErrorHandler("İstifadəçi tapılmadı, yenidən giriş edin", 401));
+            return next(new ErrorHandler("Bu token-ə aid istifadəçi tapılmadı. Yenidən daxil olun.", 401));
         }
 
         // req.user artıq dolduruldu — növbəti middleware/controller-ə keç.
@@ -99,14 +126,21 @@ export const isAuthenticatedUser = catchAsyncErrors(async (req, res, next) => {
 
     } catch (err) {
         // ── XƏTA HALLAŞI ────────────────────────────────────────────
-        // Bu catch aşağıdakı hallar üçün işləyir:
-        //   1. Token göndərilməyib (token = undefined)
-        //   2. Token-in imzası yanlışdır (başqası dəyişdirib)
-        //   3. Token-in müddəti keçib (exp < cari vaxt)
-        //   4. Token formatı pozulub (truncated, corrupted)
+        // DƏYİŞİKLİK: Əvvəl bütün xətalar eyni mesajla örtülürdü.
+        // İndi xəta növünə görə aydın mesajlar verilir:
+        //
+        //   TokenExpiredError → token-in müddəti bitib (exp < cari vaxt)
+        //   JsonWebTokenError → token-in imzası yanlışdır və ya formatı pozulub
+        //   digər             → gözlənilməyən xəta
         //
         // 401 Unauthorized — istifadəçi kimliğini sübut edə bilmədi.
-        return next(new ErrorHandler("Girish etmelisen", 401));
+        if (err.name === "TokenExpiredError") {
+            return next(new ErrorHandler("Sessiyanızın müddəti bitib. Zəhmət olmasa yenidən daxil olun.", 401));
+        }
+        if (err.name === "JsonWebTokenError") {
+            return next(new ErrorHandler("Token etibarsızdır. Zəhmət olmasa yenidən daxil olun.", 401));
+        }
+        return next(new ErrorHandler("Giriş tələb olunur.", 401));
     }
 });
 

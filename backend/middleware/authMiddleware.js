@@ -23,17 +23,38 @@ import User      from "../model/User.js";
 //
 // Bu versiya SuperAdmin route-larını da qoruya bilir.
 // SuperAdmin panelinin bütün qorunan route-larında bu middleware istifadə olunur.
+//
+// DƏYİŞİKLİK: authMiddleware.js ilə eyni düzəlişlər tətbiq edildi:
+//   - Token yoxluğu ayrıca yoxlanır (aydın mesaj)
+//   - Authorization header "Bearer " olmadan da düzgün işlənir
+//   - TokenExpiredError və JsonWebTokenError ayrıca tutulur
 // =====================================================================
 export const isAuthenticatedUser = catchAsyncErrors(async (req, res, next) => {
 
     // Cookie → veb tətbiq üçün
     // Authorization header → Postman / mobil tətbiq / API client üçün
     // Format: "Bearer eyJhbGci..." → split(" ")[1] → yalnız token hissəsi
-    const token = req?.cookies?.token || req?.headers?.authorization?.split(" ")[1];
+    let token = null;
+
+    if (req.cookies && req.cookies.token) {
+        token = req.cookies.token;
+    } else if (req.headers.authorization) {
+        const authHeader = req.headers.authorization;
+        if (authHeader.startsWith("Bearer ")) {
+            token = authHeader.split(" ")[1];
+        } else {
+            token = authHeader;
+        }
+    }
+
+    // Token yoxdursa — aydın mesajla 401 qaytar
+    if (!token) {
+        return next(new ErrorHandler("Giriş tələb olunur. Zəhmət olmasa daxil olun.", 401));
+    }
 
     try {
         // jwt.verify():
-        //   1. İmzanı yoxlayır — token dəyişdirilib-dəyişdirilmədiyini
+        //   1. İmzanı yoxlayır — token dəyişdirilub-dəyişdirilmədiyini
         //   2. Müddəti yoxlayır — token-in vaxtı keçibmi
         //   3. Payload-ı deşifrə edib qaytarır
         //
@@ -61,16 +82,21 @@ export const isAuthenticatedUser = catchAsyncErrors(async (req, res, next) => {
         // "Cannot read properties of null" xətası yaranır və server 500 qaytarır.
         // Bu yoxlama ilə düzgün 401 xətası göndərilir.
         if (!req.user) {
-            return next(new ErrorHandler("İstifadəçi tapılmadı, yenidən giriş edin", 401));
+            return next(new ErrorHandler("Bu token-ə aid istifadəçi tapılmadı. Yenidən daxil olun.", 401));
         }
 
         // req.user dolduruldu — növbəti middleware/controller-ə keç
         next();
 
     } catch (err) {
-        // Token yoxdur, etibarsızdır, müddəti keçib və ya formatı pozulubsa:
-        // 401 Unauthorized — giriş tələb olunur
-        return next(new ErrorHandler("Girish etmelisen", 401));
+        // DƏYİŞİKLİK: Xəta növünə görə aydın mesajlar verilir.
+        if (err.name === "TokenExpiredError") {
+            return next(new ErrorHandler("Sessiyanızın müddəti bitib. Zəhmət olmasa yenidən daxil olun.", 401));
+        }
+        if (err.name === "JsonWebTokenError") {
+            return next(new ErrorHandler("Token etibarsızdır. Zəhmət olmasa yenidən daxil olun.", 401));
+        }
+        return next(new ErrorHandler("Giriş tələb olunur.", 401));
     }
 });
 
@@ -176,11 +202,20 @@ export const isApprovedSeller = catchAsyncErrors(async (req, res, next) => {
 //   user       → istifadəçi obyekti (SuperAdmin, Admin və ya User)
 //   statusCode → HTTP status kodu (201: yaradıldı, 200: uğurlu)
 //   res        → Express cavab obyekti
+//
+// DƏYİŞİKLİK: sameSite və secure əlavə edildi.
+//   Əvvəl bu sahələr yox idi → cross-origin sorğularda cookie
+//   göndərilmirdi → login sonrası 401 xətası verirdi.
+//
+//   sameSite: PRODUCTION-da "none" → frontend/backend ayrı domendədirsə
+//             DEVELOPMENT-da "lax" → localhost-da işləyir
+//   secure:   PRODUCTION-da true   → yalnız HTTPS
+//             DEVELOPMENT-da false → HTTP-də də işləyir
 // =====================================================================
 export default (user, statusCode, res) => {
 
     // jwtTokeniEldeEt() — User/Admin/SuperAdmin modelindəki metoddur.
-    // İçəridə nə baş verir:
+    // İçəridə:
     //   jwt.sign({ id: user._id, model: "Admin" }, JWT_SECRET_KEY, { expiresIn: "7d" })
     //   "model" sahəsi — bu token-dən istifadəçini hansı kolleksiyada
     //   axtaracağımızı bilmək üçün token-ə yazılır.
@@ -196,9 +231,13 @@ export default (user, statusCode, res) => {
     //   JavaScript-dən document.cookie ilə token oxuna bilmir.
     //   Yalnız HTTP sorğularında avtomatik göndərilir.
     //   Zərərli skriptlər token-i oğurlaya bilmir.
+    const isProduction = process.env.NODE_ENV === "PRODUCTION";
+
     const options = {
         expires:  new Date(Date.now() + process.env.COOKIE_EXPIRES_TIME * 24 * 60 * 60 * 1000),
         httpOnly: true,
+        sameSite: isProduction ? "none" : "lax",
+        secure:   isProduction,
     };
 
     // ── CAVAB GÖNDƏR ─────────────────────────────────────────────────
