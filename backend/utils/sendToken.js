@@ -48,14 +48,27 @@ export default (user, statusCode, res, extraData = {}) => {
     //   Zərərli skript token-i oğurlaya bilmir.
     //   Token yalnız HTTP sorğularında avtomatik göndərilir.
     //
-    // Niyə secure: true yoxdur?
-    //   secure: true — token yalnız HTTPS-də göndərilər.
-    //   İnkişaf mühitində (localhost) HTTPS yoxdur — bu bağlantı kəsərdi.
-    //   İstehsal mühitinə keçdikdə əlavə etmək tövsiyə olunur:
-    //   if (process.env.NODE_ENV === "PRODUCTION") options.secure = true;
+    // sameSite — DƏYİŞİKLİK: əvvəl yox idi, indi əlavə edildi.
+    //   PRODUCTION-da "none"  → frontend və backend ayrı domendədirsə
+    //                           cross-site cookie-lər göndərilsin deyə.
+    //                           "none" yalnız secure: true ilə işləyir.
+    //   DEVELOPMENT-da "lax"  → localhost-da cross-origin cookie-lər işləyir,
+    //                           eyni zamanda CSRF-dən qoruyur.
+    //
+    // secure — DƏYİŞİKLİK: əvvəl yox idi, indi əlavə edildi.
+    //   PRODUCTION-da true  → cookie yalnız HTTPS-də göndərilir (MITM qoruması)
+    //   DEVELOPMENT-da false → localhost HTTP-də də cookie işləyir
+    //
+    // Bu iki sahənin olmaması login sonrası 401 xətasına səbəb olurdu:
+    //   Brauzer cross-origin sorğularda cookie-ni göndərmirdi →
+    //   isAuthenticatedUser token tapa bilmirdi → 401 qaytarırdı.
+    const isProduction = process.env.NODE_ENV === "PRODUCTION";
+
     const options = {
         expires:  new Date(Date.now() + process.env.COOKIE_EXPIRES_TIME * 24 * 60 * 60 * 1000),
         httpOnly: true,
+        sameSite: isProduction ? "none" : "lax",
+        secure:   isProduction,
     };
 
 
