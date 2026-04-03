@@ -83,6 +83,64 @@ const adminCategoryValues = [
     // 15. Hədiyyələr və lifestyle
     "Hediyyeler ve lifestyle",
     "GiftSets", "Souvenirs", "TrendingProducts", "BooksHobbies",
+
+    // ── YENİ FRONTEND KATEQORİYALARI ──────────────────────────────
+    // 1. Elektronika
+    "Electronics_TV", "Electronics_Photo", "Electronics_Console",
+    "Electronics_SmartHome", "Electronics_Gadgets", "Electronics_Acc",
+
+    // 2. Telefonlar
+    "Phones_Smartphone", "Phones_Basic", "Phones_Headphones",
+    "Phones_Cables", "Phones_Powerbank", "Phones_Acc",
+
+    // 3. Kompüter
+    "Computers_Laptop", "Computers_Desktop", "Computers_Monitor",
+    "Computers_Printer", "Computers_OfficeAcc", "Computers_Parts",
+
+    // 4. Məişət texnikası
+    "HomeAppliances_Large", "HomeAppliances_Small", "HomeAppliances_Kitchen",
+    "HomeAppliances_Climate", "HomeAppliances_Water",
+
+    // 5. Ev və dekor
+    "HomeDecor_Deco", "HomeDecor_Light", "HomeDecor_Textile",
+    "HomeDecor_Kitchen", "HomeDecor_Bath",
+
+    // 6. Mebel
+    "Furniture_Living", "Furniture_Bedroom", "Furniture_Kitchen",
+    "Furniture_Office", "Furniture_Garden",
+
+    // 7. Qadın geyimi
+    "WomenClothing_Outer", "WomenClothing_Inner", "WomenClothing_Casual",
+    "WomenClothing_Sport", "WomenClothing_Formal", "WomenClothing_Under",
+
+    // 8. Kişi geyimi
+    "MenClothing_Outer", "MenClothing_Inner", "MenClothing_Casual",
+    "MenClothing_Sport", "MenClothing_Formal", "MenClothing_Under",
+
+    // 9. Ayaqqabı
+    "Shoes_Sport", "Shoes_Classic", "Shoes_Casual", "Shoes_Sandal",
+
+    // 10. Aksesuarlar
+    "Accessories_Bag", "Accessories_Watch", "Accessories_Sunglasses",
+    "Accessories_Jewelry", "Accessories_Belt",
+
+    // 11. Gözəllik
+    "Beauty_Makeup", "Beauty_Skin", "Beauty_Hair",
+    "Beauty_Perfume", "Beauty_Men", "Beauty_Hygiene",
+
+    // 12. Uşaq və ana
+    "KidsAndMom_Clothing", "KidsAndMom_Toys", "KidsAndMom_Stroller",
+    "KidsAndMom_Food", "KidsAndMom_School",
+
+    // 13. İdman
+    "Sports_Fitness", "Sports_Camping", "Sports_Bicycle",
+    "Sports_Clothing", "Sports_Acc",
+
+    // 14. Avto
+    "Automotive_Acc", "Automotive_Electronics", "Automotive_Parts", "Automotive_Oils",
+
+    // 15. Hədiyyə
+    "Gifts_Sets", "Gifts_Souvenir", "Gifts_Trending", "Gifts_Books",
 ];
 
 const allowedCategoryValues = [...new Set([...legacyCategoryValues, ...adminCategoryValues])];
@@ -178,7 +236,6 @@ const Product = mongoose.model("Product", productSchema);
 // ── KÖHNƏ (LEGACY) DİSCRİMİNATORLAR ─────────────────────────────────
 // =====================================================================
 
-// TELEFONLAR — Phones
 const phoneSchema = new mongoose.Schema({
     screenSize:      { type: String, required: [true, "Screen size daxil edin"], trim: true },
     storage:         { type: String, required: [true, "Storage melumatini daxil edin"], trim: true },
@@ -191,7 +248,6 @@ const phoneSchema = new mongoose.Schema({
 });
 const Phone = Product.discriminator("Phones", phoneSchema);
 
-// NOUTBUKLAR — Laptops
 const laptopSchema = new mongoose.Schema({
     screenSize:      { type: String, required: [true, "Screen size daxil edin"], trim: true },
     storage:         { type: String, required: [true, "Storage melumatini daxil edin"], trim: true },
@@ -204,7 +260,6 @@ const laptopSchema = new mongoose.Schema({
 });
 const Laptop = Product.discriminator("Laptops", laptopSchema);
 
-// FOTOAPARATLAR — Cameras
 const cameraSchema = new mongoose.Schema({
     resolution:         { type: String, required: [true, "Resolution melumatini daxil edin"], trim: true },
     opticalZoom:        { type: String, required: [true, "Optical zoom melumatini daxil edin"], trim: true },
@@ -213,7 +268,6 @@ const cameraSchema = new mongoose.Schema({
 });
 const Camera = Product.discriminator("Cameras", cameraSchema);
 
-// QULAQLILAR — Headphones
 const headphoneSchema = new mongoose.Schema({
     connectivity:      { type: String, required: [true, "Connectivity melumatini daxil edin"], trim: true },
     batteryLife:       { type: String, required: [true, "Battery life melumatini daxil edin"], trim: true },
@@ -221,7 +275,6 @@ const headphoneSchema = new mongoose.Schema({
 });
 const Headphone = Product.discriminator("Headphones", headphoneSchema);
 
-// OYUN KONSOLLARİ — Console
 const consoleSchema = new mongoose.Schema({
     cpu:                 { type: String, required: [true, "CPU melumatini daxil edin"], trim: true },
     gpu:                 { type: String, required: [true, "GPU melumatini daxil edin"], trim: true },
@@ -233,7 +286,6 @@ const consoleSchema = new mongoose.Schema({
 });
 const Console = Product.discriminator("Console", consoleSchema);
 
-// iPAD
 const iPadSchema = new mongoose.Schema({
     screenSize:      { type: String, required: [true, "Screen size daxil edin"], trim: true },
     storage:         { type: String, required: [true, "Storage melumatini daxil edin"], trim: true },
@@ -246,7 +298,6 @@ const iPadSchema = new mongoose.Schema({
 });
 const iPad = Product.discriminator("iPad", iPadSchema);
 
-// QADIN GEYİMLƏRİ — WomenClothing
 const womenClothingSchema = new mongoose.Schema({
     size:     { type: String, required: [true, "Olcunu daxil edin"], trim: true },
     color:    { type: String, required: [true, "Rengi daxil edin"], trim: true },
@@ -256,7 +307,6 @@ const womenClothingSchema = new mongoose.Schema({
 });
 const WomenClothing = Product.discriminator("WomenClothing", womenClothingSchema);
 
-// KİŞİ GEYİMLƏRİ — MenClothing
 const menClothingSchema = new mongoose.Schema({
     size:     { type: String, required: [true, "Olcunu daxil edin"], trim: true },
     color:    { type: String, required: [true, "Rengi daxil edin"], trim: true },
@@ -266,7 +316,6 @@ const menClothingSchema = new mongoose.Schema({
 });
 const MenClothing = Product.discriminator("MenClothing", menClothingSchema);
 
-// UŞAQ GEYİMLƏRİ — KidsClothing
 const kidsClothingSchema = new mongoose.Schema({
     size:     { type: String, required: [true, "Olcunu daxil edin"], trim: true },
     color:    { type: String, required: [true, "Rengi daxil edin"], trim: true },
@@ -277,7 +326,6 @@ const kidsClothingSchema = new mongoose.Schema({
 });
 const KidsClothing = Product.discriminator("KidsClothing", kidsClothingSchema);
 
-// EV TEXNİKASI — HomeAppliances
 const homeAppliancesSchema = new mongoose.Schema({
     brand:            { type: String, required: [true, "Brendi daxil edin"], trim: true },
     powerConsumption: { type: String, required: [true, "Guc istehlakini daxil edin"], trim: true },
@@ -287,7 +335,6 @@ const homeAppliancesSchema = new mongoose.Schema({
 });
 const HomeAppliance = Product.discriminator("HomeAppliances", homeAppliancesSchema);
 
-// EV VƏ BAĞ — HomeAndGarden
 const homeAndGardenSchema = new mongoose.Schema({
     material:      { type: String, required: [true, "Materiali daxil edin"], trim: true },
     dimensions:    { type: String, required: [true, "Olculeri daxil edin"], trim: true },
@@ -297,7 +344,6 @@ const homeAndGardenSchema = new mongoose.Schema({
 });
 const HomeAndGarden = Product.discriminator("HomeAndGarden", homeAndGardenSchema);
 
-// GÖZƏLLIK — Beauty
 const beautySchema = new mongoose.Schema({
     brand:       { type: String, required: [true, "Brendi daxil edin"], trim: true },
     skinType:    { type: String, required: [true, "Deri tipini daxil edin"], trim: true },
@@ -307,17 +353,15 @@ const beautySchema = new mongoose.Schema({
 });
 const Beauty = Product.discriminator("Beauty", beautySchema);
 
-// İDMAN — Sports
 const sportsSchema = new mongoose.Schema({
-    brand:      { type: String, required: [true, "Brendi daxil edin"], trim: true },
-    material:   { type: String, required: [true, "Materiali daxil edin"], trim: true },
-    weight:     { type: String, required: [true, "Cekini daxil edin"], trim: true },
-    suitableFor:{ type: String, required: [true, "Idman novunu daxil edin"], trim: true },
-    color:      { type: String, required: [true, "Rengi daxil edin"], trim: true },
+    brand:       { type: String, required: [true, "Brendi daxil edin"], trim: true },
+    material:    { type: String, required: [true, "Materiali daxil edin"], trim: true },
+    weight:      { type: String, required: [true, "Cekini daxil edin"], trim: true },
+    suitableFor: { type: String, required: [true, "Idman novunu daxil edin"], trim: true },
+    color:       { type: String, required: [true, "Rengi daxil edin"], trim: true },
 });
 const Sports = Product.discriminator("Sports", sportsSchema);
 
-// OTOMOBİL — Automotive
 const automotiveSchema = new mongoose.Schema({
     brand:            { type: String, required: [true, "Brendi daxil edin"], trim: true },
     compatibleModels: { type: String, required: [true, "Uygun avtomobil modellerini daxil edin"], trim: true },
@@ -332,7 +376,6 @@ const Automotive = Product.discriminator("Automotive", automotiveSchema);
 // ── 1. ELEKTRONİKA ALT KATEQORİYALARI ───────────────────────────────
 // =====================================================================
 
-// TV və audio sistemlər
 const tvSchema = new mongoose.Schema({
     tvType:           { type: String, required: [true, "TV növünü daxil edin"], trim: true },
     screenSize:       { type: String, required: [true, "Ekran ölçüsünü daxil edin"], trim: true },
@@ -351,7 +394,6 @@ const audioSystemSchema = new mongoose.Schema({
 });
 const AudioSystems = Product.discriminator("AudioSystems", audioSystemSchema);
 
-// Foto və video texnika
 const photoVideoSchema = new mongoose.Schema({
     cameraType:         { type: String, required: [true, "Kamera növünü daxil edin"], trim: true },
     lensMount:          { type: String, trim: true },
@@ -362,7 +404,6 @@ const photoVideoSchema = new mongoose.Schema({
 });
 const PhotoVideo = Product.discriminator("PhotoVideo", photoVideoSchema);
 
-// Oyun konsolları (yeni)
 const gameConsoleSchema = new mongoose.Schema({
     cpu:                 { type: String, required: [true, "CPU daxil edin"], trim: true },
     gpu:                 { type: String, required: [true, "GPU daxil edin"], trim: true },
@@ -374,7 +415,6 @@ const gameConsoleSchema = new mongoose.Schema({
 });
 const GameConsoles = Product.discriminator("GameConsoles", gameConsoleSchema);
 
-// Smart Home
 const smartHomeSchema = new mongoose.Schema({
     smartHomeProtocol: { type: String, required: [true, "Smart home protokolunu daxil edin"], trim: true },
     compatibility:     { type: String, trim: true },
@@ -383,7 +423,6 @@ const smartHomeSchema = new mongoose.Schema({
 });
 const SmartHome = Product.discriminator("SmartHome", smartHomeSchema);
 
-// Gadgetlər
 const gadgetSchema = new mongoose.Schema({
     gadgetType:   { type: String, required: [true, "Gadget növünü daxil edin"], trim: true },
     connectivity: { type: String, trim: true },
@@ -392,7 +431,6 @@ const gadgetSchema = new mongoose.Schema({
 });
 const Gadgets = Product.discriminator("Gadgets", gadgetSchema);
 
-// Elektronika aksesuarları
 const electronicsAccessorySchema = new mongoose.Schema({
     accessoryType: { type: String, required: [true, "Aksesuar növünü daxil edin"], trim: true },
     compatibility: { type: String, trim: true },
@@ -406,7 +444,6 @@ const ElectronicsAccessories = Product.discriminator("ElectronicsAccessories", e
 // ── 2. TELEFONLAR VƏ AKSESUARLAR ─────────────────────────────────────
 // =====================================================================
 
-// Smartfonlar
 const smartphoneSchema = new mongoose.Schema({
     screenSize:      { type: String, required: [true, "Ekran ölçüsünü daxil edin"], trim: true },
     storage:         { type: String, required: [true, "Yaddaşı daxil edin"], trim: true },
@@ -421,7 +458,6 @@ const smartphoneSchema = new mongoose.Schema({
 });
 const Smartphones = Product.discriminator("Smartphones", smartphoneSchema);
 
-// Düyməli telefonlar
 const featurePhoneSchema = new mongoose.Schema({
     battery: { type: String, required: [true, "Batareyanı daxil edin"], trim: true },
     dualSim: { type: Boolean, default: false },
@@ -431,7 +467,6 @@ const featurePhoneSchema = new mongoose.Schema({
 });
 const FeaturePhones = Product.discriminator("FeaturePhones", featurePhoneSchema);
 
-// Qulaqlıqlar (yeni)
 const headphonesNewSchema = new mongoose.Schema({
     headphoneType:     { type: String, required: [true, "Qulaqlıq növünü daxil edin"], trim: true },
     connectivity:      { type: String, required: [true, "Bağlantı növünü daxil edin"], trim: true },
@@ -442,7 +477,6 @@ const headphonesNewSchema = new mongoose.Schema({
 });
 const HeadphonesNew = Product.discriminator("HeadphonesNew", headphonesNewSchema);
 
-// Kabellər və adapterlər
 const cableAdapterSchema = new mongoose.Schema({
     cableLength:   { type: String, required: [true, "Kabel uzunluğunu daxil edin"], trim: true },
     connectorType: { type: String, required: [true, "Konnektoru daxil edin"], trim: true },
@@ -451,7 +485,6 @@ const cableAdapterSchema = new mongoose.Schema({
 });
 const CablesAdapters = Product.discriminator("CablesAdapters", cableAdapterSchema);
 
-// Powerbank
 const powerbankSchema = new mongoose.Schema({
     powerbankCapacity: { type: String, required: [true, "Tutumu daxil edin"], trim: true },
     ports:             { type: String, required: [true, "Portları daxil edin"], trim: true },
@@ -460,7 +493,6 @@ const powerbankSchema = new mongoose.Schema({
 });
 const Powerbanks = Product.discriminator("Powerbanks", powerbankSchema);
 
-// Telefon aksesuarları
 const phoneAccessorySchema = new mongoose.Schema({
     accessoryType:    { type: String, required: [true, "Aksesuar növünü daxil edin"], trim: true },
     compatibleModels: { type: String, trim: true },
@@ -474,7 +506,6 @@ const PhoneAccessories = Product.discriminator("PhoneAccessories", phoneAccessor
 // ── 3. KOMPÜTER VƏ OFİS TEXNİKASI ────────────────────────────────────
 // =====================================================================
 
-// Noutbuklar (yeni)
 const laptopsNewSchema = new mongoose.Schema({
     screenSize:      { type: String, required: [true, "Ekran ölçüsünü daxil edin"], trim: true },
     storage:         { type: String, required: [true, "Yaddaşı daxil edin"], trim: true },
@@ -487,7 +518,6 @@ const laptopsNewSchema = new mongoose.Schema({
 });
 const LaptopsNew = Product.discriminator("LaptopsNew", laptopsNewSchema);
 
-// Stolüstü kompüterlər
 const desktopSchema = new mongoose.Schema({
     desktopType: { type: String, required: [true, "Kompüter növünü daxil edin"], trim: true },
     processor:   { type: String, required: [true, "Prosessoru daxil edin"], trim: true },
@@ -498,17 +528,15 @@ const desktopSchema = new mongoose.Schema({
 });
 const Desktops = Product.discriminator("Desktops", desktopSchema);
 
-// Monitorlar
 const monitorSchema = new mongoose.Schema({
-    monitorSize:  { type: String, required: [true, "Ekran ölçüsünü daxil edin"], trim: true },
-    panelType:    { type: String, required: [true, "Panel növünü daxil edin"], trim: true },
-    resolution:   { type: String, required: [true, "Həlli daxil edin"], trim: true },
-    refreshRate:  { type: String, required: [true, "Yenilənmə tezliyini daxil edin"], trim: true },
-    brand:        { type: String, required: [true, "Brendi daxil edin"], trim: true },
+    monitorSize: { type: String, required: [true, "Ekran ölçüsünü daxil edin"], trim: true },
+    panelType:   { type: String, required: [true, "Panel növünü daxil edin"], trim: true },
+    resolution:  { type: String, required: [true, "Həlli daxil edin"], trim: true },
+    refreshRate: { type: String, required: [true, "Yenilənmə tezliyini daxil edin"], trim: true },
+    brand:       { type: String, required: [true, "Brendi daxil edin"], trim: true },
 });
 const Monitors = Product.discriminator("Monitors", monitorSchema);
 
-// Printer və skanerlər
 const printerScannerSchema = new mongoose.Schema({
     printerType: { type: String, required: [true, "Printer növünü daxil edin"], trim: true },
     paperSize:   { type: String, required: [true, "Kağız ölçüsünü daxil edin"], trim: true },
@@ -518,7 +546,6 @@ const printerScannerSchema = new mongoose.Schema({
 });
 const PrintersScanners = Product.discriminator("PrintersScanners", printerScannerSchema);
 
-// Ofis aksesuarları
 const officeAccessorySchema = new mongoose.Schema({
     accessoryType: { type: String, required: [true, "Aksesuar növünü daxil edin"], trim: true },
     material:      { type: String, trim: true },
@@ -526,7 +553,6 @@ const officeAccessorySchema = new mongoose.Schema({
 });
 const OfficeAccessories = Product.discriminator("OfficeAccessories", officeAccessorySchema);
 
-// Komponentlər (RAM, SSD və s.)
 const componentSchema = new mongoose.Schema({
     componentType: { type: String, required: [true, "Komponent növünü daxil edin"], trim: true },
     capacity:      { type: String, required: [true, "Tutumu daxil edin"], trim: true },
@@ -540,7 +566,6 @@ const Components = Product.discriminator("Components", componentSchema);
 // ── 4. MƏİŞƏT TEXNİKASI ──────────────────────────────────────────────
 // =====================================================================
 
-// Böyük məişət texnikası (soyuducu, paltaryuyan və s.)
 const largeApplianceSchema = new mongoose.Schema({
     applianceType: { type: String, required: [true, "Texnika növünü daxil edin"], trim: true },
     energyClass:   { type: String, required: [true, "Enerji sinfini daxil edin"], trim: true },
@@ -550,7 +575,6 @@ const largeApplianceSchema = new mongoose.Schema({
 });
 const LargeAppliances = Product.discriminator("LargeAppliances", largeApplianceSchema);
 
-// Kiçik məişət texnikası (tozsoran, blender və s.)
 const smallApplianceSchema = new mongoose.Schema({
     applianceType: { type: String, required: [true, "Texnika növünü daxil edin"], trim: true },
     power:         { type: String, required: [true, "Gücü daxil edin"], trim: true },
@@ -559,7 +583,6 @@ const smallApplianceSchema = new mongoose.Schema({
 });
 const SmallAppliances = Product.discriminator("SmallAppliances", smallApplianceSchema);
 
-// Mətbəx texnikası
 const kitchenApplianceSchema = new mongoose.Schema({
     kitchenAppliance: { type: String, required: [true, "Mətbəx cihazını daxil edin"], trim: true },
     material:         { type: String, required: [true, "Materiali daxil edin"], trim: true },
@@ -568,7 +591,6 @@ const kitchenApplianceSchema = new mongoose.Schema({
 });
 const KitchenAppliances = Product.discriminator("KitchenAppliances", kitchenApplianceSchema);
 
-// Kondisioner və isitmə
 const climateControlSchema = new mongoose.Schema({
     airConditionerType: { type: String, required: [true, "Kondisioner növünü daxil edin"], trim: true },
     heatingType:        { type: String, trim: true },
@@ -577,7 +599,6 @@ const climateControlSchema = new mongoose.Schema({
 });
 const AirConditioners = Product.discriminator("AirConditioners", climateControlSchema);
 
-// Su qızdırıcıları
 const waterHeaterSchema = new mongoose.Schema({
     capacity:    { type: String, required: [true, "Tutumu daxil edin"], trim: true },
     energyClass: { type: String, required: [true, "Enerji sinfini daxil edin"], trim: true },
@@ -590,7 +611,6 @@ const WaterHeaters = Product.discriminator("WaterHeaters", waterHeaterSchema);
 // ── 5. EV VƏ DEKOR ───────────────────────────────────────────────────
 // =====================================================================
 
-// Dekorasiya
 const homeDecorSchema = new mongoose.Schema({
     decorType: { type: String, required: [true, "Dekor növünü daxil edin"], trim: true },
     material:  { type: String, required: [true, "Materiali daxil edin"], trim: true },
@@ -599,7 +619,6 @@ const homeDecorSchema = new mongoose.Schema({
 });
 const HomeDecor = Product.discriminator("HomeDecor", homeDecorSchema);
 
-// İşıqlandırma
 const lightingSchema = new mongoose.Schema({
     lightType:        { type: String, required: [true, "İşıq növünü daxil edin"], trim: true },
     wattage:          { type: String, required: [true, "Gücü daxil edin"], trim: true },
@@ -608,7 +627,6 @@ const lightingSchema = new mongoose.Schema({
 });
 const Lighting = Product.discriminator("Lighting", lightingSchema);
 
-// Ev tekstili
 const homeTextilesSchema = new mongoose.Schema({
     textileType: { type: String, required: [true, "Tekstil növünü daxil edin"], trim: true },
     material:    { type: String, required: [true, "Materiali daxil edin"], trim: true },
@@ -618,7 +636,6 @@ const homeTextilesSchema = new mongoose.Schema({
 });
 const HomeTextiles = Product.discriminator("HomeTextiles", homeTextilesSchema);
 
-// Mətbəx qabları
 const kitchenwareSchema = new mongoose.Schema({
     kitchenwareType: { type: String, required: [true, "Qab növünü daxil edin"], trim: true },
     material:        { type: String, required: [true, "Materiali daxil edin"], trim: true },
@@ -627,7 +644,6 @@ const kitchenwareSchema = new mongoose.Schema({
 });
 const Kitchenware = Product.discriminator("Kitchenware", kitchenwareSchema);
 
-// Hamam aksesuarları
 const bathAccessorySchema = new mongoose.Schema({
     bathAccessoryType: { type: String, required: [true, "Aksesuar növünü daxil edin"], trim: true },
     material:          { type: String, required: [true, "Materiali daxil edin"], trim: true },
@@ -641,7 +657,6 @@ const BathAccessories = Product.discriminator("BathAccessories", bathAccessorySc
 // ── 6. MEBEL ─────────────────────────────────────────────────────────
 // =====================================================================
 
-// Qonaq otağı mebeli
 const livingRoomFurnitureSchema = new mongoose.Schema({
     furnitureType: { type: String, required: [true, "Mebel növünü daxil edin"], trim: true },
     material:      { type: String, required: [true, "Materiali daxil edin"], trim: true },
@@ -651,7 +666,6 @@ const livingRoomFurnitureSchema = new mongoose.Schema({
 });
 const LivingRoomFurniture = Product.discriminator("LivingRoomFurniture", livingRoomFurnitureSchema);
 
-// Yataq otağı mebeli
 const bedroomFurnitureSchema = new mongoose.Schema({
     furnitureType: { type: String, required: [true, "Mebel növünü daxil edin"], trim: true },
     material:      { type: String, required: [true, "Materiali daxil edin"], trim: true },
@@ -661,7 +675,6 @@ const bedroomFurnitureSchema = new mongoose.Schema({
 });
 const BedroomFurniture = Product.discriminator("BedroomFurniture", bedroomFurnitureSchema);
 
-// Mətbəx mebeli
 const kitchenFurnitureSchema = new mongoose.Schema({
     furnitureType: { type: String, required: [true, "Mebel növünü daxil edin"], trim: true },
     material:      { type: String, required: [true, "Materiali daxil edin"], trim: true },
@@ -671,7 +684,6 @@ const kitchenFurnitureSchema = new mongoose.Schema({
 });
 const KitchenFurniture = Product.discriminator("KitchenFurniture", kitchenFurnitureSchema);
 
-// Ofis mebeli
 const officeFurnitureSchema = new mongoose.Schema({
     furnitureType: { type: String, required: [true, "Mebel növünü daxil edin"], trim: true },
     material:      { type: String, required: [true, "Materiali daxil edin"], trim: true },
@@ -681,7 +693,6 @@ const officeFurnitureSchema = new mongoose.Schema({
 });
 const OfficeFurniture = Product.discriminator("OfficeFurniture", officeFurnitureSchema);
 
-// Bağ mebeli
 const gardenFurnitureSchema = new mongoose.Schema({
     furnitureType: { type: String, required: [true, "Mebel növünü daxil edin"], trim: true },
     material:      { type: String, required: [true, "Materiali daxil edin"], trim: true },
@@ -696,7 +707,6 @@ const GardenFurniture = Product.discriminator("GardenFurniture", gardenFurniture
 // ── 7. QADIN GEYİMLƏRİ ALT KATEQORİYALARI ───────────────────────────
 // =====================================================================
 
-// Üst geyim (bluz, köynək, sviter və s.)
 const womensTopsSchema = new mongoose.Schema({
     size:     { type: String, required: [true, "Ölçü daxil edin"], trim: true },
     color:    { type: String, required: [true, "Rəngi daxil edin"], trim: true },
@@ -707,7 +717,6 @@ const womensTopsSchema = new mongoose.Schema({
 });
 const WomensTops = Product.discriminator("WomensTops", womensTopsSchema);
 
-// Alt geyim (şalvar, ətək, cins)
 const womensBottomsSchema = new mongoose.Schema({
     size:       { type: String, required: [true, "Ölçü daxil edin"], trim: true },
     color:      { type: String, required: [true, "Rəngi daxil edin"], trim: true },
@@ -718,7 +727,6 @@ const womensBottomsSchema = new mongoose.Schema({
 });
 const WomensBottoms = Product.discriminator("WomensBottoms", womensBottomsSchema);
 
-// Gündəlik geyim
 const womensCasualSchema = new mongoose.Schema({
     size:     { type: String, required: [true, "Ölçü daxil edin"], trim: true },
     color:    { type: String, required: [true, "Rəngi daxil edin"], trim: true },
@@ -729,7 +737,6 @@ const womensCasualSchema = new mongoose.Schema({
 });
 const WomensCasual = Product.discriminator("WomensCasual", womensCasualSchema);
 
-// İdman geyimi
 const womensSportSchema = new mongoose.Schema({
     size:      { type: String, required: [true, "Ölçü daxil edin"], trim: true },
     color:     { type: String, required: [true, "Rəngi daxil edin"], trim: true },
@@ -739,7 +746,6 @@ const womensSportSchema = new mongoose.Schema({
 });
 const WomensSport = Product.discriminator("WomensSport", womensSportSchema);
 
-// Rəsmi geyim
 const womensFormalSchema = new mongoose.Schema({
     size:     { type: String, required: [true, "Ölçü daxil edin"], trim: true },
     color:    { type: String, required: [true, "Rəngi daxil edin"], trim: true },
@@ -749,7 +755,6 @@ const womensFormalSchema = new mongoose.Schema({
 });
 const WomensFormal = Product.discriminator("WomensFormal", womensFormalSchema);
 
-// Alt paltarları
 const womensUnderwearSchema = new mongoose.Schema({
     size:     { type: String, required: [true, "Ölçü daxil edin"], trim: true },
     color:    { type: String, required: [true, "Rəngi daxil edin"], trim: true },
@@ -764,7 +769,6 @@ const WomensUnderwear = Product.discriminator("WomensUnderwear", womensUnderwear
 // ── 8. KİŞİ GEYİMLƏRİ ALT KATEQORİYALARI ────────────────────────────
 // =====================================================================
 
-// Üst geyim
 const mensTopsSchema = new mongoose.Schema({
     size:     { type: String, required: [true, "Ölçü daxil edin"], trim: true },
     color:    { type: String, required: [true, "Rəngi daxil edin"], trim: true },
@@ -775,7 +779,6 @@ const mensTopsSchema = new mongoose.Schema({
 });
 const MensTops = Product.discriminator("MensTops", mensTopsSchema);
 
-// Alt geyim (şalvar, cins)
 const mensBottomsSchema = new mongoose.Schema({
     size:       { type: String, required: [true, "Ölçü daxil edin"], trim: true },
     color:      { type: String, required: [true, "Rəngi daxil edin"], trim: true },
@@ -786,7 +789,6 @@ const mensBottomsSchema = new mongoose.Schema({
 });
 const MensBottoms = Product.discriminator("MensBottoms", mensBottomsSchema);
 
-// Gündəlik geyim
 const mensCasualSchema = new mongoose.Schema({
     size:     { type: String, required: [true, "Ölçü daxil edin"], trim: true },
     color:    { type: String, required: [true, "Rəngi daxil edin"], trim: true },
@@ -797,7 +799,6 @@ const mensCasualSchema = new mongoose.Schema({
 });
 const MensCasual = Product.discriminator("MensCasual", mensCasualSchema);
 
-// İdman geyimi
 const mensSportSchema = new mongoose.Schema({
     size:      { type: String, required: [true, "Ölçü daxil edin"], trim: true },
     color:     { type: String, required: [true, "Rəngi daxil edin"], trim: true },
@@ -807,7 +808,6 @@ const mensSportSchema = new mongoose.Schema({
 });
 const MensSport = Product.discriminator("MensSport", mensSportSchema);
 
-// Rəsmi geyim
 const mensFormalSchema = new mongoose.Schema({
     size:     { type: String, required: [true, "Ölçü daxil edin"], trim: true },
     color:    { type: String, required: [true, "Rəngi daxil edin"], trim: true },
@@ -817,7 +817,6 @@ const mensFormalSchema = new mongoose.Schema({
 });
 const MensFormal = Product.discriminator("MensFormal", mensFormalSchema);
 
-// Alt paltarları
 const mensUnderwearSchema = new mongoose.Schema({
     size:     { type: String, required: [true, "Ölçü daxil edin"], trim: true },
     color:    { type: String, required: [true, "Rəngi daxil edin"], trim: true },
@@ -832,18 +831,16 @@ const MensUnderwear = Product.discriminator("MensUnderwear", mensUnderwearSchema
 // ── 9. AYAQQABI ──────────────────────────────────────────────────────
 // =====================================================================
 
-// İdman ayaqqabısı
 const sportsShoesSchema = new mongoose.Schema({
-    shoeType:    { type: String, required: [true, "Ayaqqabı növünü daxil edin"], trim: true },
-    size:        { type: String, required: [true, "Ölçü daxil edin"], trim: true },
-    soleMaterial:{ type: String, required: [true, "Alt materialını daxil edin"], trim: true },
-    closureType: { type: String, required: [true, "Bağlama növünü daxil edin"], trim: true },
-    color:       { type: String, trim: true },
-    brand:       { type: String, required: [true, "Brendi daxil edin"], trim: true },
+    shoeType:     { type: String, required: [true, "Ayaqqabı növünü daxil edin"], trim: true },
+    size:         { type: String, required: [true, "Ölçü daxil edin"], trim: true },
+    soleMaterial: { type: String, required: [true, "Alt materialını daxil edin"], trim: true },
+    closureType:  { type: String, required: [true, "Bağlama növünü daxil edin"], trim: true },
+    color:        { type: String, trim: true },
+    brand:        { type: String, required: [true, "Brendi daxil edin"], trim: true },
 });
 const SportsShoes = Product.discriminator("SportsShoes", sportsShoesSchema);
 
-// Klassik ayaqqabı
 const classicShoesSchema = new mongoose.Schema({
     shoeType:    { type: String, required: [true, "Ayaqqabı növünü daxil edin"], trim: true },
     size:        { type: String, required: [true, "Ölçü daxil edin"], trim: true },
@@ -854,7 +851,6 @@ const classicShoesSchema = new mongoose.Schema({
 });
 const ClassicShoes = Product.discriminator("ClassicShoes", classicShoesSchema);
 
-// Gündəlik ayaqqabı
 const casualShoesSchema = new mongoose.Schema({
     shoeType:    { type: String, required: [true, "Ayaqqabı növünü daxil edin"], trim: true },
     size:        { type: String, required: [true, "Ölçü daxil edin"], trim: true },
@@ -865,7 +861,6 @@ const casualShoesSchema = new mongoose.Schema({
 });
 const CasualShoes = Product.discriminator("CasualShoes", casualShoesSchema);
 
-// Sandalet və yay ayaqqabıları
 const sandalsSchema = new mongoose.Schema({
     shoeType:    { type: String, required: [true, "Ayaqqabı növünü daxil edin"], trim: true },
     size:        { type: String, required: [true, "Ölçü daxil edin"], trim: true },
@@ -881,7 +876,6 @@ const Sandals = Product.discriminator("Sandals", sandalsSchema);
 // ── 10. AKSESUARLAR ──────────────────────────────────────────────────
 // =====================================================================
 
-// Çantalar
 const bagsSchema = new mongoose.Schema({
     bagType:  { type: String, required: [true, "Çanta növünü daxil edin"], trim: true },
     material: { type: String, required: [true, "Materiali daxil edin"], trim: true },
@@ -890,7 +884,6 @@ const bagsSchema = new mongoose.Schema({
 });
 const Bags = Product.discriminator("Bags", bagsSchema);
 
-// Saatlar
 const watchesSchema = new mongoose.Schema({
     watchType:  { type: String, required: [true, "Saat növünü daxil edin"], trim: true },
     material:   { type: String, required: [true, "Materiali daxil edin"], trim: true },
@@ -899,7 +892,6 @@ const watchesSchema = new mongoose.Schema({
 });
 const Watches = Product.discriminator("Watches", watchesSchema);
 
-// Günəş eynəkləri
 const sunglassesSchema = new mongoose.Schema({
     frameMaterial:  { type: String, required: [true, "Çərçivə materialını daxil edin"], trim: true },
     lensTechnology: { type: String, trim: true },
@@ -908,7 +900,6 @@ const sunglassesSchema = new mongoose.Schema({
 });
 const Sunglasses = Product.discriminator("Sunglasses", sunglassesSchema);
 
-// Zərgərlik
 const jewelrySchema = new mongoose.Schema({
     jewelryType: { type: String, required: [true, "Zərgərlik növünü daxil edin"], trim: true },
     material:    { type: String, required: [true, "Materiali daxil edin"], trim: true },
@@ -917,7 +908,6 @@ const jewelrySchema = new mongoose.Schema({
 });
 const Jewelry = Product.discriminator("Jewelry", jewelrySchema);
 
-// Kəmərlər
 const beltsSchema = new mongoose.Schema({
     beltType: { type: String, required: [true, "Kəmər növünü daxil edin"], trim: true },
     material: { type: String, required: [true, "Materiali daxil edin"], trim: true },
@@ -931,7 +921,6 @@ const Belts = Product.discriminator("Belts", beltsSchema);
 // ── 11. GÖZƏLLIK VƏ KOSMETİKA ────────────────────────────────────────
 // =====================================================================
 
-// Makiyaj
 const makeupSchema = new mongoose.Schema({
     brand:       { type: String, required: [true, "Brendi daxil edin"], trim: true },
     productType: { type: String, required: [true, "Məhsul növünü daxil edin"], trim: true },
@@ -940,7 +929,6 @@ const makeupSchema = new mongoose.Schema({
 });
 const Makeup = Product.discriminator("Makeup", makeupSchema);
 
-// Dəriyə qulluq
 const skincareSchema = new mongoose.Schema({
     brand:       { type: String, required: [true, "Brendi daxil edin"], trim: true },
     skinType:    { type: String, required: [true, "Dəri növünü daxil edin"], trim: true },
@@ -949,7 +937,6 @@ const skincareSchema = new mongoose.Schema({
 });
 const Skincare = Product.discriminator("Skincare", skincareSchema);
 
-// Saça qulluq
 const hairCareSchema = new mongoose.Schema({
     brand:       { type: String, required: [true, "Brendi daxil edin"], trim: true },
     hairType:    { type: String, required: [true, "Saç növünü daxil edin"], trim: true },
@@ -958,7 +945,6 @@ const hairCareSchema = new mongoose.Schema({
 });
 const HairCare = Product.discriminator("HairCare", hairCareSchema);
 
-// Parfümeriya
 const fragranceSchema = new mongoose.Schema({
     brand:         { type: String, required: [true, "Brendi daxil edin"], trim: true },
     fragranceType: { type: String, required: [true, "Ətir növünü daxil edin"], trim: true },
@@ -966,7 +952,6 @@ const fragranceSchema = new mongoose.Schema({
 });
 const Fragrance = Product.discriminator("Fragrance", fragranceSchema);
 
-// Kişi baxım məhsulları
 const menGroomingSchema = new mongoose.Schema({
     brand:       { type: String, required: [true, "Brendi daxil edin"], trim: true },
     productType: { type: String, required: [true, "Məhsul növünü daxil edin"], trim: true },
@@ -974,7 +959,6 @@ const menGroomingSchema = new mongoose.Schema({
 });
 const MenGrooming = Product.discriminator("MenGrooming", menGroomingSchema);
 
-// Gigiyena
 const hygieneSchema = new mongoose.Schema({
     brand:       { type: String, required: [true, "Brendi daxil edin"], trim: true },
     productType: { type: String, required: [true, "Məhsul növünü daxil edin"], trim: true },
@@ -987,7 +971,6 @@ const Hygiene = Product.discriminator("Hygiene", hygieneSchema);
 // ── 12. UŞAQ VƏ ANA ──────────────────────────────────────────────────
 // =====================================================================
 
-// Uşaq geyimləri (yeni)
 const kidsClothingNewSchema = new mongoose.Schema({
     kidsClothingType: { type: String, required: [true, "Geyim növünü daxil edin"], trim: true },
     size:             { type: String, required: [true, "Ölçü daxil edin"], trim: true },
@@ -997,7 +980,6 @@ const kidsClothingNewSchema = new mongoose.Schema({
 });
 const KidsClothingNew = Product.discriminator("KidsClothingNew", kidsClothingNewSchema);
 
-// Oyuncaqlar
 const toysSchema = new mongoose.Schema({
     toyType:  { type: String, required: [true, "Oyuncaq növünü daxil edin"], trim: true },
     ageRange: { type: String, required: [true, "Yaş aralığını daxil edin"], trim: true },
@@ -1006,7 +988,6 @@ const toysSchema = new mongoose.Schema({
 });
 const Toys = Product.discriminator("Toys", toysSchema);
 
-// Uşaq arabaları
 const strollersSchema = new mongoose.Schema({
     strollerType: { type: String, required: [true, "Araba növünü daxil edin"], trim: true },
     weight:       { type: String, required: [true, "Çəkisini daxil edin"], trim: true },
@@ -1015,7 +996,6 @@ const strollersSchema = new mongoose.Schema({
 });
 const Strollers = Product.discriminator("Strollers", strollersSchema);
 
-// Qidalanma məhsulları
 const babyFeedingSchema = new mongoose.Schema({
     feedingProduct: { type: String, required: [true, "Məhsul növünü daxil edin"], trim: true },
     material:       { type: String, required: [true, "Materiali daxil edin"], trim: true },
@@ -1024,7 +1004,6 @@ const babyFeedingSchema = new mongoose.Schema({
 });
 const BabyFeeding = Product.discriminator("BabyFeeding", babyFeedingSchema);
 
-// Məktəb ləvazimatları
 const schoolSuppliesSchema = new mongoose.Schema({
     productType: { type: String, required: [true, "Məhsul növünü daxil edin"], trim: true },
     brand:       { type: String, trim: true },
@@ -1037,7 +1016,6 @@ const SchoolSupplies = Product.discriminator("SchoolSupplies", schoolSuppliesSch
 // ── 13. İDMAN VƏ OUTDOOR ─────────────────────────────────────────────
 // =====================================================================
 
-// Fitness avadanlıqları
 const fitnessEquipmentSchema = new mongoose.Schema({
     sportEquipmentType: { type: String, required: [true, "Avadanlıq növünü daxil edin"], trim: true },
     weight:             { type: String, trim: true },
@@ -1046,7 +1024,6 @@ const fitnessEquipmentSchema = new mongoose.Schema({
 });
 const FitnessEquipment = Product.discriminator("FitnessEquipment", fitnessEquipmentSchema);
 
-// Kampinq
 const campingSchema = new mongoose.Schema({
     campingItem: { type: String, required: [true, "Məhsul növünü daxil edin"], trim: true },
     material:    { type: String, required: [true, "Materiali daxil edin"], trim: true },
@@ -1055,7 +1032,6 @@ const campingSchema = new mongoose.Schema({
 });
 const Camping = Product.discriminator("Camping", campingSchema);
 
-// Velosipedlər
 const bicyclesSchema = new mongoose.Schema({
     bikeType:      { type: String, required: [true, "Velosiped növünü daxil edin"], trim: true },
     frameMaterial: { type: String, required: [true, "Çərçivə materialını daxil edin"], trim: true },
@@ -1064,7 +1040,6 @@ const bicyclesSchema = new mongoose.Schema({
 });
 const Bicycles = Product.discriminator("Bicycles", bicyclesSchema);
 
-// İdman geyimi
 const sportsApparelSchema = new mongoose.Schema({
     clothingType: { type: String, required: [true, "Geyim növünü daxil edin"], trim: true },
     size:         { type: String, required: [true, "Ölçü daxil edin"], trim: true },
@@ -1073,7 +1048,6 @@ const sportsApparelSchema = new mongoose.Schema({
 });
 const SportsApparel = Product.discriminator("SportsApparel", sportsApparelSchema);
 
-// İdman aksesuarları
 const sportsAccessoriesSchema = new mongoose.Schema({
     accessoryType: { type: String, required: [true, "Aksesuar növünü daxil edin"], trim: true },
     material:      { type: String, required: [true, "Materiali daxil edin"], trim: true },
@@ -1086,7 +1060,6 @@ const SportsAccessories = Product.discriminator("SportsAccessories", sportsAcces
 // ── 14. AVTO MƏHSULLAR ───────────────────────────────────────────────
 // =====================================================================
 
-// Avto aksesuarlar
 const autoAccessoriesSchema = new mongoose.Schema({
     autoAccessoryType: { type: String, required: [true, "Aksesuar növünü daxil edin"], trim: true },
     compatibleModels:  { type: String, required: [true, "Uyğun modelleri daxil edin"], trim: true },
@@ -1095,7 +1068,6 @@ const autoAccessoriesSchema = new mongoose.Schema({
 });
 const AutoAccessories = Product.discriminator("AutoAccessories", autoAccessoriesSchema);
 
-// Avto elektronika (dashcam, registrator və s.)
 const autoElectronicsSchema = new mongoose.Schema({
     deviceType:       { type: String, required: [true, "Cihaz növünü daxil edin"], trim: true },
     compatibleModels: { type: String, required: [true, "Uyğun modelleri daxil edin"], trim: true },
@@ -1104,7 +1076,6 @@ const autoElectronicsSchema = new mongoose.Schema({
 });
 const AutoElectronics = Product.discriminator("AutoElectronics", autoElectronicsSchema);
 
-// Ehtiyat hissələri
 const sparePartsSchema = new mongoose.Schema({
     sparePartType:    { type: String, required: [true, "Hissə növünü daxil edin"], trim: true },
     compatibleModels: { type: String, required: [true, "Uyğun modelleri daxil edin"], trim: true },
@@ -1113,7 +1084,6 @@ const sparePartsSchema = new mongoose.Schema({
 });
 const SpareParts = Product.discriminator("SpareParts", sparePartsSchema);
 
-// Yağlar və kimyəvi məhsullar
 const autoChemicalsSchema = new mongoose.Schema({
     chemicalType: { type: String, required: [true, "Kimyəvi növünü daxil edin"], trim: true },
     volume:       { type: String, required: [true, "Həcmi daxil edin"], trim: true },
@@ -1127,7 +1097,6 @@ const AutoChemicals = Product.discriminator("AutoChemicals", autoChemicalsSchema
 // ── 15. HƏDİYYƏLƏR VƏ LİFESTYLE ─────────────────────────────────────
 // =====================================================================
 
-// Hədiyyə setləri
 const giftSetsSchema = new mongoose.Schema({
     giftType: { type: String, required: [true, "Hədiyyə növünü daxil edin"], trim: true },
     occasion: { type: String, required: [true, "Mərasimi daxil edin"], trim: true },
@@ -1136,7 +1105,6 @@ const giftSetsSchema = new mongoose.Schema({
 });
 const GiftSets = Product.discriminator("GiftSets", giftSetsSchema);
 
-// Suvenirlər
 const souvenirsSchema = new mongoose.Schema({
     productType: { type: String, required: [true, "Məhsul növünü daxil edin"], trim: true },
     origin:      { type: String, trim: true },
@@ -1145,7 +1113,6 @@ const souvenirsSchema = new mongoose.Schema({
 });
 const Souvenirs = Product.discriminator("Souvenirs", souvenirsSchema);
 
-// Maraqlı məhsullar (trending)
 const trendingProductsSchema = new mongoose.Schema({
     productType:     { type: String, required: [true, "Məhsul növünü daxil edin"], trim: true },
     popularityScore: { type: Number, default: 0 },
@@ -1153,7 +1120,6 @@ const trendingProductsSchema = new mongoose.Schema({
 });
 const TrendingProducts = Product.discriminator("TrendingProducts", trendingProductsSchema);
 
-// Kitablar və hobbi
 const booksHobbiesSchema = new mongoose.Schema({
     hobbyType: { type: String, required: [true, "Hobbi növünü daxil edin"], trim: true },
     author:    { type: String, trim: true },
@@ -1161,6 +1127,121 @@ const booksHobbiesSchema = new mongoose.Schema({
     brand:     { type: String, trim: true },
 });
 const BooksHobbies = Product.discriminator("BooksHobbies", booksHobbiesSchema);
+
+
+// =====================================================================
+// ── YENİ FRONTEND DİSCRİMİNATORLARI ─────────────────────────────────
+// =====================================================================
+
+const es = () => new mongoose.Schema({});
+
+// 1. Elektronika
+const Electronics_TV        = Product.discriminator("Electronics_TV",        es());
+const Electronics_Photo     = Product.discriminator("Electronics_Photo",     es());
+const Electronics_Console   = Product.discriminator("Electronics_Console",   es());
+const Electronics_SmartHome = Product.discriminator("Electronics_SmartHome", es());
+const Electronics_Gadgets   = Product.discriminator("Electronics_Gadgets",   es());
+const Electronics_Acc       = Product.discriminator("Electronics_Acc",       es());
+
+// 2. Telefonlar
+const Phones_Smartphone = Product.discriminator("Phones_Smartphone", es());
+const Phones_Basic      = Product.discriminator("Phones_Basic",      es());
+const Phones_Headphones = Product.discriminator("Phones_Headphones", es());
+const Phones_Cables     = Product.discriminator("Phones_Cables",     es());
+const Phones_Powerbank  = Product.discriminator("Phones_Powerbank",  es());
+const Phones_Acc        = Product.discriminator("Phones_Acc",        es());
+
+// 3. Kompüter
+const Computers_Laptop    = Product.discriminator("Computers_Laptop",    es());
+const Computers_Desktop   = Product.discriminator("Computers_Desktop",   es());
+const Computers_Monitor   = Product.discriminator("Computers_Monitor",   es());
+const Computers_Printer   = Product.discriminator("Computers_Printer",   es());
+const Computers_OfficeAcc = Product.discriminator("Computers_OfficeAcc", es());
+const Computers_Parts     = Product.discriminator("Computers_Parts",     es());
+
+// 4. Məişət texnikası
+const HomeAppliances_Large   = Product.discriminator("HomeAppliances_Large",   es());
+const HomeAppliances_Small   = Product.discriminator("HomeAppliances_Small",   es());
+const HomeAppliances_Kitchen = Product.discriminator("HomeAppliances_Kitchen", es());
+const HomeAppliances_Climate = Product.discriminator("HomeAppliances_Climate", es());
+const HomeAppliances_Water   = Product.discriminator("HomeAppliances_Water",   es());
+
+// 5. Ev və dekor
+const HomeDecor_Deco    = Product.discriminator("HomeDecor_Deco",    es());
+const HomeDecor_Light   = Product.discriminator("HomeDecor_Light",   es());
+const HomeDecor_Textile = Product.discriminator("HomeDecor_Textile", es());
+const HomeDecor_Kitchen = Product.discriminator("HomeDecor_Kitchen", es());
+const HomeDecor_Bath    = Product.discriminator("HomeDecor_Bath",    es());
+
+// 6. Mebel
+const Furniture_Living   = Product.discriminator("Furniture_Living",   es());
+const Furniture_Bedroom  = Product.discriminator("Furniture_Bedroom",  es());
+const Furniture_Kitchen  = Product.discriminator("Furniture_Kitchen",  es());
+const Furniture_Office   = Product.discriminator("Furniture_Office",   es());
+const Furniture_Garden   = Product.discriminator("Furniture_Garden",   es());
+
+// 7. Qadın geyimi
+const WomenClothing_Outer  = Product.discriminator("WomenClothing_Outer",  es());
+const WomenClothing_Inner  = Product.discriminator("WomenClothing_Inner",  es());
+const WomenClothing_Casual = Product.discriminator("WomenClothing_Casual", es());
+const WomenClothing_Sport  = Product.discriminator("WomenClothing_Sport",  es());
+const WomenClothing_Formal = Product.discriminator("WomenClothing_Formal", es());
+const WomenClothing_Under  = Product.discriminator("WomenClothing_Under",  es());
+
+// 8. Kişi geyimi
+const MenClothing_Outer  = Product.discriminator("MenClothing_Outer",  es());
+const MenClothing_Inner  = Product.discriminator("MenClothing_Inner",  es());
+const MenClothing_Casual = Product.discriminator("MenClothing_Casual", es());
+const MenClothing_Sport  = Product.discriminator("MenClothing_Sport",  es());
+const MenClothing_Formal = Product.discriminator("MenClothing_Formal", es());
+const MenClothing_Under  = Product.discriminator("MenClothing_Under",  es());
+
+// 9. Ayaqqabı
+const Shoes_Sport   = Product.discriminator("Shoes_Sport",   es());
+const Shoes_Classic = Product.discriminator("Shoes_Classic", es());
+const Shoes_Casual  = Product.discriminator("Shoes_Casual",  es());
+const Shoes_Sandal  = Product.discriminator("Shoes_Sandal",  es());
+
+// 10. Aksesuarlar
+const Accessories_Bag        = Product.discriminator("Accessories_Bag",        es());
+const Accessories_Watch      = Product.discriminator("Accessories_Watch",      es());
+const Accessories_Sunglasses = Product.discriminator("Accessories_Sunglasses", es());
+const Accessories_Jewelry    = Product.discriminator("Accessories_Jewelry",    es());
+const Accessories_Belt       = Product.discriminator("Accessories_Belt",       es());
+
+// 11. Gözəllik
+const Beauty_Makeup  = Product.discriminator("Beauty_Makeup",  es());
+const Beauty_Skin    = Product.discriminator("Beauty_Skin",    es());
+const Beauty_Hair    = Product.discriminator("Beauty_Hair",    es());
+const Beauty_Perfume = Product.discriminator("Beauty_Perfume", es());
+const Beauty_Men     = Product.discriminator("Beauty_Men",     es());
+const Beauty_Hygiene = Product.discriminator("Beauty_Hygiene", es());
+
+// 12. Uşaq və ana
+const KidsAndMom_Clothing = Product.discriminator("KidsAndMom_Clothing", es());
+const KidsAndMom_Toys     = Product.discriminator("KidsAndMom_Toys",     es());
+const KidsAndMom_Stroller = Product.discriminator("KidsAndMom_Stroller", es());
+const KidsAndMom_Food     = Product.discriminator("KidsAndMom_Food",     es());
+const KidsAndMom_School   = Product.discriminator("KidsAndMom_School",   es());
+
+// 13. İdman
+const Sports_Fitness  = Product.discriminator("Sports_Fitness",  es());
+const Sports_Camping  = Product.discriminator("Sports_Camping",  es());
+const Sports_Bicycle  = Product.discriminator("Sports_Bicycle",  es());
+const Sports_Clothing = Product.discriminator("Sports_Clothing", es());
+const Sports_Acc      = Product.discriminator("Sports_Acc",      es());
+
+// 14. Avto
+const Automotive_Acc         = Product.discriminator("Automotive_Acc",         es());
+const Automotive_Electronics = Product.discriminator("Automotive_Electronics", es());
+const Automotive_Parts       = Product.discriminator("Automotive_Parts",       es());
+const Automotive_Oils        = Product.discriminator("Automotive_Oils",        es());
+
+// 15. Hədiyyə
+const Gifts_Sets     = Product.discriminator("Gifts_Sets",     es());
+const Gifts_Souvenir = Product.discriminator("Gifts_Souvenir", es());
+const Gifts_Trending = Product.discriminator("Gifts_Trending", es());
+const Gifts_Books    = Product.discriminator("Gifts_Books",    es());
 
 
 // =====================================================================
@@ -1298,4 +1379,62 @@ export {
     Souvenirs,
     TrendingProducts,
     BooksHobbies,
+
+    // ── YENİ FRONTEND DİSCRİMİNATORLARI ──────────────────────────
+    // 1. Elektronika
+    Electronics_TV, Electronics_Photo, Electronics_Console,
+    Electronics_SmartHome, Electronics_Gadgets, Electronics_Acc,
+
+    // 2. Telefonlar
+    Phones_Smartphone, Phones_Basic, Phones_Headphones,
+    Phones_Cables, Phones_Powerbank, Phones_Acc,
+
+    // 3. Kompüter
+    Computers_Laptop, Computers_Desktop, Computers_Monitor,
+    Computers_Printer, Computers_OfficeAcc, Computers_Parts,
+
+    // 4. Məişət texnikası
+    HomeAppliances_Large, HomeAppliances_Small, HomeAppliances_Kitchen,
+    HomeAppliances_Climate, HomeAppliances_Water,
+
+    // 5. Ev və dekor
+    HomeDecor_Deco, HomeDecor_Light, HomeDecor_Textile,
+    HomeDecor_Kitchen, HomeDecor_Bath,
+
+    // 6. Mebel
+    Furniture_Living, Furniture_Bedroom, Furniture_Kitchen,
+    Furniture_Office, Furniture_Garden,
+
+    // 7. Qadın geyimi
+    WomenClothing_Outer, WomenClothing_Inner, WomenClothing_Casual,
+    WomenClothing_Sport, WomenClothing_Formal, WomenClothing_Under,
+
+    // 8. Kişi geyimi
+    MenClothing_Outer, MenClothing_Inner, MenClothing_Casual,
+    MenClothing_Sport, MenClothing_Formal, MenClothing_Under,
+
+    // 9. Ayaqqabı
+    Shoes_Sport, Shoes_Classic, Shoes_Casual, Shoes_Sandal,
+
+    // 10. Aksesuarlar
+    Accessories_Bag, Accessories_Watch, Accessories_Sunglasses,
+    Accessories_Jewelry, Accessories_Belt,
+
+    // 11. Gözəllik
+    Beauty_Makeup, Beauty_Skin, Beauty_Hair,
+    Beauty_Perfume, Beauty_Men, Beauty_Hygiene,
+
+    // 12. Uşaq və ana
+    KidsAndMom_Clothing, KidsAndMom_Toys, KidsAndMom_Stroller,
+    KidsAndMom_Food, KidsAndMom_School,
+
+    // 13. İdman
+    Sports_Fitness, Sports_Camping, Sports_Bicycle,
+    Sports_Clothing, Sports_Acc,
+
+    // 14. Avto
+    Automotive_Acc, Automotive_Electronics, Automotive_Parts, Automotive_Oils,
+
+    // 15. Hədiyyə
+    Gifts_Sets, Gifts_Souvenir, Gifts_Trending, Gifts_Books,
 };
