@@ -110,15 +110,33 @@ export const isAuthenticatedUser = catchAsyncErrors(async (req, res, next) => {
         //   Admin — mağaza məlumatları (sellerInfo) kimi əlavə sahələrə malikdir.
         //   User  — adi alıcı istifadəçilərdir.
         //   Hər ikisi eyni giriş formasından istifadə edir.
+        let user = null;
         if (decoded.model === "SuperAdmin") {
-            req.user = await SuperAdmin.findById(decoded.id);
+            user = await SuperAdmin.findById(decoded.id);
         } else if (decoded.model === "Admin") {
-            req.user = await Admin.findById(decoded.id);
+            user = await Admin.findById(decoded.id);
         } else if (decoded.model === "Blogger") {
-            req.user = await Blogger.findById(decoded.id);
+            user = await Blogger.findById(decoded.id);
         } else {
-            req.user = await User.findById(decoded.id);
+            user = await User.findById(decoded.id);
         }
+
+        // ── FALLBACK YOXLAMASI ─────────────────────────────────────────
+        // Əgər göstərilən modeldə tapılmadısa, digərlərində yoxla (resilience).
+        // Bu, istifadəçi bir sistemdən digərinə keçdikdə köhnə tokenin işləməsini təmin edir.
+        if (!user) {
+            user = await User.findById(decoded.id) || 
+                   await Admin.findById(decoded.id) || 
+                   await Blogger.findById(decoded.id) || 
+                   await SuperAdmin.findById(decoded.id);
+        }
+
+        if (!user) {
+            console.error(`Auth Error: User with ID ${decoded.id} and model ${decoded.model} not found.`);
+            return next(new ErrorHandler("Bu token-ə aid istifadəçi tapılmadı. Yenidən daxil olun.", 401));
+        }
+
+        req.user = user;
 
         // ── NULL YOXLAMASI ───────────────────────────────────────────
         // findById() istifadəçini tapa bilmədikdə null qaytarır.

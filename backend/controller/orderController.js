@@ -143,9 +143,12 @@ export const createOrder = catchAsyncErrors(async (req, res, next) => {
         const bConfig = await BonusConfig.getConfig();
         const maxBonus = Math.floor((totalAmount * bConfig.maxRedemptionPercent) / 100 / bConfig.bonusValueAzn);
         validatedBonusUsed = Math.min(bonusUsed, maxBonus);
-        const userDoc = await User.findById(userId);
-        if (userDoc && userDoc.bonusBalance < validatedBonusUsed) {
-            validatedBonusUsed = userDoc.bonusBalance;
+        
+        // req.user has bonusBalance only if it's a regular User.
+        // Admin, Blogger or SuperAdmin don't have bonuses.
+        const currentBalance = req.user.bonusBalance || 0;
+        if (currentBalance < validatedBonusUsed) {
+            validatedBonusUsed = currentBalance;
         }
     }
 

@@ -208,15 +208,13 @@ export const getMyBonus = catchAsyncErrors(async (req, res) => {
         .limit(50)
         .lean();
 
-    const user = await User.findById(userId).select("referralCode isPhoneVerified phone");
-
     res.status(200).json({
         success: true,
         balance,
         transactions,
-        referralCode:    user.referralCode,
-        isPhoneVerified: user.isPhoneVerified,
-        phone:           user.phone,
+        referralCode:    req.user.referralCode || null,
+        isPhoneVerified: req.user.isPhoneVerified || false,
+        phone:           req.user.phone || null,
     });
 });
 
@@ -252,11 +250,10 @@ export const requestPhoneOtp = catchAsyncErrors(async (req, res, next) => {
     // Hash edib saxla (plain text saxlamırıq)
     const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
 
-    await User.findByIdAndUpdate(req.user._id, {
-        phone:         phone.trim(),
-        phoneOtp:      hashedOtp,
-        phoneOtpExpire: expire,
-    });
+    req.user.phone = phone.trim();
+    req.user.phoneOtp = hashedOtp;
+    req.user.phoneOtpExpire = expire;
+    await req.user.save({ validateBeforeSave: false });
 
     // OTP-ni email ilə göndər (SMS üçün Twilio inteqrasiyası sonra əlavə edilə bilər)
     await sendEmail({
@@ -295,7 +292,7 @@ export const verifyPhoneOtp = catchAsyncErrors(async (req, res, next) => {
         return next(new ErrorHandler("Telefon nömrəsi və OTP tələb olunur", 400));
     }
 
-    const user = await User.findById(req.user._id).select("+phoneOtp +phoneOtpExpire");
+    const user = req.user; // auth middleware already selected everything except passwords usually
 
     if (!user.phoneOtp || !user.phoneOtpExpire) {
         return next(new ErrorHandler("OTP tapılmadı. Yenidən sorğu göndərin", 400));
@@ -339,8 +336,7 @@ export const redeemBonuses = catchAsyncErrors(async (req, res, next) => {
     }
 
     // Telefon doğrulaması mütləqdir
-    const user = await User.findById(userId);
-    if (!user.isPhoneVerified) {
+    if (!req.user.isPhoneVerified) {
         return next(new ErrorHandler("Bonus istifadəsi üçün telefon nömrənizi doğrulamalısınız", 403, "PHONE_REQUIRED"));
     }
 
@@ -495,8 +491,7 @@ export const awardReviewBonus = catchAsyncErrors(async (req, res, next) => {
 // GET /bonus/referral
 // =====================================================================
 export const getReferralInfo = catchAsyncErrors(async (req, res) => {
-    const userId = req.user._id;
-    const user = await User.findById(userId).select("referralCode");
+    const referralCode = req.user.referralCode;
 
     // Referral statistikası
     const totalReferred = await User.countDocuments({ referredBy: userId });
@@ -509,8 +504,8 @@ export const getReferralInfo = catchAsyncErrors(async (req, res) => {
 
     res.status(200).json({
         success:          true,
-        referralCode:     user.referralCode,
-        referralLink:     `${frontendUrl}/register?ref=${user.referralCode}`,
+        referralCode:     req.user.referralCode || null,
+        referralLink:     req.user.referralCode ? `${frontendUrl}/register?ref=${req.user.referralCode}` : null,
         totalReferred,
         earnedFromReferral: earnedFromReferral[0]?.total || 0,
     });
