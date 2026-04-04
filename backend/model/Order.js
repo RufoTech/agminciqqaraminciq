@@ -1,6 +1,7 @@
 // mongoose — MongoDB ilə işləmək üçün kitabxana.
 import mongoose from "mongoose";
 
+<<<<<<< HEAD
 
 // =====================================================================
 // SİFARİŞ SCHEMA-SI — orderSchema
@@ -178,4 +179,52 @@ const orderSchema = new mongoose.Schema(
 //   Order.findById(id)                           → tək sifariş
 //   order.save()                                 → status yenilə
 // =====================================================================
+=======
+const orderSchema = new mongoose.Schema(
+    {
+        user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
+        },
+        orderItems: [
+            {
+                product: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "Product",
+                    required: true,
+                },
+                name:     { type: String, required: true },
+                price:    { type: Number, required: true },
+                quantity: { type: Number, required: true, default: 1 },
+                image:    { type: String },
+                seller:   { type: String },
+            },
+        ],
+        paymentInfo: {
+            stripePaymentId: { type: String, required: true },
+            status:          { type: String, required: true },
+            currency:        { type: String, default: "azn" },
+        },
+        totalAmount: {
+            type: Number,
+            required: true,
+            default: 0,
+        },
+        orderStatus: {
+            type: String,
+            required: true,
+            default: "pending",
+            enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
+        },
+        isCompleted: {
+            type: Boolean,
+            default: false,
+        },
+        deliveredAt: Date,
+    },
+    { timestamps: true }
+);
+
+>>>>>>> 39ee1e0f5c38caf6333774ca7d4b3400bfbabeab
 export default mongoose.model("Order", orderSchema);
