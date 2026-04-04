@@ -12,8 +12,8 @@
 
 import catchAsyncErrors from "../middleware/catchAsyncErrors.js";
 import ErrorHandler     from "../utils/errorHandler.js";
-import Blogger, { generatePromoCode } from "../models/Blogger.js";
-import BloggerSale      from "../models/BloggerSale.js";
+import Blogger, { generatePromoCode } from "../model/Blogger.js";
+import BloggerSale      from "../model/BloggerSale.js";
 import sendToken        from "../utils/sendToken.js";
 
 

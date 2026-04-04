@@ -39,7 +39,7 @@ import { Product } from "../model/Product.js";
 
 // notifyNewUser — yeni istifadəçi qeydiyyat etdikdə adminlərə
 // bildiriş göndərən yardımçı funksiya.
-import { notifyNewUser } from "../utils/notificationHelper.js";
+import { notifyNewUser, notifyWelcome } from "../utils/notificationHelper.js";
 
 
 // =====================================================================
@@ -180,8 +180,37 @@ export const registerUser = catchAsyncErrors(async (req, res, next) => {
     // Bu, adminlərin sistemi izləməsi üçün faydalıdır.
     await notifyNewUser({ userName: user.name, userEmail: user.email });
 
+    // İstifadəçinin özünə xoş gəldiniz bildirişi göndər
+    notifyWelcome(user).catch(() => {});
+
     // JWT token yaradılır və cookie-yə yazılır — istifadəçi dərhal daxil olmuş sayılır.
     sendToken(user, 201, res);
+});
+
+
+// =====================================================================
+// MAĞAZA SLUG-U — SATICI ADINDAN
+// ---------------------------------------------------------------------
+// GET /store/seller/:name
+// Məhsul kartında "Mağazaya bax" düyməsi üçün.
+// Məhsulun "seller" sahəsi storeName-dir. Bu endpoint storeName → storeSlug
+// çevirir ki, frontend /store/:slug səhifəsinə yönlənə bilsin.
+// =====================================================================
+export const getStoreSlugBySeller = catchAsyncErrors(async (req, res, next) => {
+    const raw = decodeURIComponent(req.params.name).trim();
+    // Case-insensitive axtarış — böyük/kiçik hərfə görə fərq olmasın
+    const escaped = raw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const admin = await Admin.findOne({
+        "sellerInfo.storeName": { $regex: new RegExp(`^${escaped}$`, "i") },
+    }).select("sellerInfo.storeSlug sellerInfo.storeName");
+    if (!admin || !admin.sellerInfo?.storeSlug) {
+        return next(new ErrorHandler("Mağaza tapılmadı", 404));
+    }
+    res.status(200).json({
+        success:   true,
+        storeSlug: admin.sellerInfo.storeSlug,
+        storeName: admin.sellerInfo.storeName,
+    });
 });
 
 
@@ -208,13 +237,28 @@ export const getStoreBySlug = catchAsyncErrors(async (req, res, next) => {
     // Həmin mağazaya aid məhsullar — seller sahəsi mağaza adına bərabər olanlar
     const products = await Product.find({ seller: user.sellerInfo.storeName });
 
-    // Cavabda phone göstərilmir — ictimai endpoint-də həssas məlumat paylaşılmır
+    // ── MAĞAZA REYTİNQİ HESABLAMA ────────────────────────────────────
+    // Bütün məhsulların reytinqlərini çəki ilə ortalaması alınır.
+    // (ratings * numOfReviews) / totalReviews = ağırlıqlı orta reytinq
+    let totalWeightedRating = 0, totalReviews = 0;
+    products.forEach(p => {
+        totalWeightedRating += (p.ratings || 0) * (p.numOfReviews || 0);
+        totalReviews        += (p.numOfReviews || 0);
+    });
+    const storeRating = totalReviews > 0
+        ? parseFloat((totalWeightedRating / totalReviews).toFixed(1))
+        : 0;
+
     res.status(200).json({
         success: true,
         store: {
             storeName:    user.sellerInfo.storeName,
             storeSlug:    user.sellerInfo.storeSlug,
             storeAddress: user.sellerInfo.storeAddress,
+            phone:        user.sellerInfo.phone,   // telefon artıq göstərilir
+            storeRating,
+            totalReviews,
+            isBlocked:    user.isBlocked || false,
         },
         products,
         totalProducts: products.length,
@@ -230,32 +274,50 @@ export const getStoreBySlug = catchAsyncErrors(async (req, res, next) => {
 // Əvvəlcə Admin cədvəlində, tapılmasa User cədvəlində axtarış aparılır.
 // =====================================================================
 export const login = catchAsyncErrors(async (req, res, next) => {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
 
     // Hər iki sahə məcburidir — biri boş olarsa 400 qaytarılır
     if (!email || !password) {
         return next(new ErrorHandler("Zəhmət olmasa emaili və ya şifrəni daxil edin", 400));
     }
 
-    // ── İKİ MƏRHƏLƏLİ AXTARIŞ ───────────────────────────────────────
-    // Niyə əvvəlcə Admin, sonra User?
-    //   — Adminlər ayrı kolleksiyada saxlanılır
-    //   — Hər ikisini yoxlamaq lazımdır, çünki giriş forması eynidir
+    // ── ROL ƏSASLI AXTARIŞ ───────────────────────────────────────────
+    // role = "admin" → yalnız Admin kolleksiyasında axtarış aparılır.
+    // role = "user"  → yalnız User kolleksiyasında axtarış aparılır.
+    // Bu sayəsində bir rolun istifadəçisi digər rolun formasından girə bilməz.
     //
-    // .select("+password") — niyə lazımdır?
-    //   Mongoose modelində password sahəsi adətən
-    //   "select: false" ilə gizlədilir — sorğularda avtomatik gəlmir.
-    //   Giriş zamanı şifrəni müqayisə etmək üçün onu açıq istəmək lazımdır.
-    let user = await Admin.findOne({ email }).select("+password");
-    if (!user) {
+    // .select("+password") — Mongoose modelində password sahəsi "select: false"
+    // ilə gizlədilir. Giriş zamanı şifrəni müqayisə etmək üçün açıq istəmək lazımdır.
+    let user = null;
+
+    if (role === "admin") {
+        // Yalnız Admin (satıcı) kolleksiyasında axtar
+        user = await Admin.findOne({ email }).select("+password");
+        if (!user) {
+            return next(new ErrorHandler(
+                "Bu email ilə satıcı hesabı tapılmadı. Əgər alıcı hesabınız varsa, 'Alıcı' sekmesini seçin.",
+                401
+            ));
+        }
+    } else {
+        // Yalnız User (alıcı) kolleksiyasında axtar
         user = await User.findOne({ email }).select("+password");
+        if (!user) {
+            return next(new ErrorHandler(
+                "Bu email ilə alıcı hesabı tapılmadı. Əgər satıcı hesabınız varsa, 'Satıcı' sekmesini seçin.",
+                401
+            ));
+        }
     }
 
-    // Heç bir kolleksiyada tapılmadısa — 401 Unauthorized
-    // Niyə 401, 404 deyil? Təhlükəsizlik: "istifadəçi yoxdur" demək
-    // hücumçuya hansı emailin mövcud olduğunu açıqlayır.
-    if (!user) {
-        return next(new ErrorHandler("Belə bir emailə sahib istifadəçi tapılmadı", 401));
+    // ── BLOK YOXLAMASI ───────────────────────────────────────────────
+    // SuperAdmin tərəfindən bloklanmış admin VƏ ya user girişi bloklayırıq.
+    // isBlocked sahəsi həm Admin həm də User modelindədir.
+    if (user.isBlocked) {
+        return next(new ErrorHandler(
+            "Hesabınız bloklanıb. Səbəb: " + (user.blockReason || "Superadminlə əlaqə saxlayın."),
+            403
+        ));
     }
 
     // shifreleriMuqayiseEt() — User/Admin modelindəki metoddur.
