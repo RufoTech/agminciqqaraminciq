@@ -410,6 +410,41 @@ export const getBloggersOverview = catchAsyncErrors(async (req, res, next) => {
 
 
 // ─────────────────────────────────────────────────────────────────────
+//  BLOGER — QEYDİYYAT (ÖZ-ÖZÜ)
+//  POST /commerce/mehsullar/blogger/register
+// ─────────────────────────────────────────────────────────────────────
+// Body: { firstName, lastName, fatherName, email, phone, password }
+// Qeydiyyatdan keçən bloger default 40% faiz ilə aktiv yaradılır.
+// Admin sonradan faizi dəyişə bilər.
+export const registerBlogger = catchAsyncErrors(async (req, res, next) => {
+    const { firstName, lastName, fatherName, email, phone, password } = req.body;
+
+    if (!firstName || !email || !password) {
+        return next(new ErrorHandler("Ad, e-poçt və şifrə mütləqdir.", 400));
+    }
+
+    const existing = await Blogger.findOne({ email });
+    if (existing) {
+        return next(new ErrorHandler("Bu e-poçt artıq qeydiyyatdadır.", 400));
+    }
+
+    const blogger = await Blogger.create({
+        firstName,
+        lastName:           lastName  || "",
+        fatherName:         fatherName || "",
+        email,
+        phone:              phone     || "",
+        password,
+        commissionRate:     40,        // Default — admin dəyişə bilər
+        commissionDuration: 6,
+        isActive:           true,
+    });
+
+    sendToken(blogger, 201, res);
+});
+
+
+// ─────────────────────────────────────────────────────────────────────
 //  BLOGER — GİRİŞ
 //  POST /commerce/mehsullar/blogger/login
 // ─────────────────────────────────────────────────────────────────────

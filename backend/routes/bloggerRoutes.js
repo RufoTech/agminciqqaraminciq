@@ -1,87 +1,81 @@
-// express — Node.js üçün veb framework.
-// Router — URL-ləri controller funksiyalarına yönləndirən modul.
-import express from "express";
-
-// authController-dən lazımlı funksiyaları import edirik.
-import {
-    registerUser,
-    login,
-    logout,
-    forgotPassword,
-    resetPassword,
-    getStoreBySlug,
-} from "../controller/authController.js";
-
-
 // =====================================================================
-// ROUTER YARATMA
+// BLOGER ROUTES — routes/bloggerRoutes.js
 // ---------------------------------------------------------------------
-// express.Router() — mini Express tətbiqi kimidir.
-// Route-ları qruplaşdırır — app.js-də bir dəfə mount edilir:
-//   app.use("/commerce", authRouter)
-//   → Bütün bu route-lar "/commerce/..." ilə başlayır.
-//
-// Niyə Router istifadə edilir, app birbaşa deyil?
-//   Modulyarlıq: hər fayl öz route-larını idarə edir.
-//   app.js-i şişirtmir — bütün route-lar ayrı faylda saxlanılır.
+// Bütün bloger endpoint-ləri burada qeydiyyatdan keçir.
+// Base path: /commerce/mehsullar
 // =====================================================================
+
+import express from "express";
+import {
+    // Admin
+    createBlogger,
+    getAllBloggers,
+    getBloggerById,
+    updateBlogger,
+    updateCommissionRate,
+    updateCommissionDuration,
+    regenPromoCode,
+    payCommission,
+    deleteBlogger,
+    getBloggersOverview,
+    // Bloger
+    registerBlogger,
+    bloggerLogin,
+    bloggerLogout,
+    getBloggerProfile,
+    getBloggerSales,
+    // Public
+    validatePromoCode,
+    trackPromoLink,
+} from "../controllers/bloggerController.js";
+
+import { isBloggerAuthenticated } from "../middleware/bloggerAuth.js";
+import { isAuthenticatedUser, authorizeRoles } from "../middleware/auth.js"; // mövcud admin auth
+
 const router = express.Router();
 
+// ── ADMIN ROUTES ─────────────────────────────────────────────────────
+// Bütün admin route-ları isAuthenticatedUser + "admin" rolu tələb edir.
 
-// =====================================================================
-// AUTENTİFİKASİYA ROUTE-LARI
-// ---------------------------------------------------------------------
-// Bu route-lar ictimai (public) — token tələb etmir.
-// İstənilən ziyarətçi bu endpoint-lərə sorğu göndərə bilər.
-// =====================================================================
+router.route("/superadmin/bloggers/stats/overview")
+    .get(isAuthenticatedUser, authorizeRoles("admin"), getBloggersOverview);
 
-// POST /commerce/register
-// Yeni istifadəçi və ya admin qeydiyyatı.
-// Body: { name, email, password, role?, storeName?, ... }
-router.post("/register", registerUser);
+router.route("/superadmin/bloggers")
+    .get(isAuthenticatedUser, authorizeRoles("admin"), getAllBloggers);
 
-// POST /commerce/login
-// Email + şifrə ilə giriş → JWT token cookie-yə yazılır.
-// Body: { email, password }
-router.post("/login", login);
+router.route("/superadmin/bloggers/create")
+    .post(isAuthenticatedUser, authorizeRoles("admin"), createBlogger);
 
-// GET /commerce/logout
-// Cookie-dəki token-i silir → istifadəçi çıxış etmiş sayılır.
-// Niyə GET? Heç bir data göndərilmir — yalnız cookie silinir.
-router.get("/logout", logout);
+router.route("/superadmin/bloggers/:id")
+    .get(isAuthenticatedUser, authorizeRoles("admin"), getBloggerById)
+    .put(isAuthenticatedUser, authorizeRoles("admin"), updateBlogger)
+    .delete(isAuthenticatedUser, authorizeRoles("admin"), deleteBlogger);
 
-// POST /commerce/password/forgot
-// Email-ə şifrə sıfırlama linki göndərir.
-// Body: { email }
-router.post("/password/forgot", forgotPassword);
+router.route("/superadmin/bloggers/:id/commission")
+    .put(isAuthenticatedUser, authorizeRoles("admin"), updateCommissionRate);
 
-// PUT /commerce/password/reset/:token
-// Email-dəki linkdən gələn token ilə yeni şifrə təyin edir.
-// Params: token (URL-dən)
-// Body: { password, confirmPassword }
-// Niyə PUT? Mövcud resurs (şifrə) yenilənir — HTTP semantikasına uyğundur.
-router.put("/password/reset/:token", resetPassword);
+router.route("/superadmin/bloggers/:id/commission-duration")
+    .put(isAuthenticatedUser, authorizeRoles("admin"), updateCommissionDuration);
 
+router.route("/superadmin/bloggers/:id/regen-promo")
+    .put(isAuthenticatedUser, authorizeRoles("admin"), regenPromoCode);
 
-// =====================================================================
-// MAĞAZA PROFİLİ ROUTE-U
-// ---------------------------------------------------------------------
-// GET /commerce/store/:slug
-//
-// İctimai route — heç bir token tələb etmir.
-// Niyə ictimai?
-//   Müştəri mağaza linkini paylaşa bilər — giriş etmədən baxılsın.
-//   Məsələn: "vusal-market-4231" linkini WhatsApp-da paylaş.
-//
-// :slug — URL-dəki dəyişən hissə (dinamik parametr).
-//   Məsələn: /store/vusal-market-4231
-//   req.params.slug = "vusal-market-4231"
-//
-// getStoreBySlug:
-//   Admin kolleksiyasında storeSlug ilə axtarır.
-//   Mağaza məlumatları + həmin mağazanın məhsulları qaytarılır.
-// =====================================================================
-router.get("/store/:slug", getStoreBySlug);
+router.route("/superadmin/bloggers/:id/pay-commission")
+    .post(isAuthenticatedUser, authorizeRoles("admin"), payCommission);
 
+// ── BLOGER ROUTES ─────────────────────────────────────────────────────
+router.route("/blogger/register").post(registerBlogger);
+router.route("/blogger/login").post(bloggerLogin);
+router.route("/blogger/logout").get(bloggerLogout);
+
+router.route("/blogger/profile")
+    .get(isBloggerAuthenticated, getBloggerProfile);
+
+router.route("/blogger/sales")
+    .get(isBloggerAuthenticated, getBloggerSales);
+
+// ── PUBLIC ROUTES ─────────────────────────────────────────────────────
+router.route("/promo/validate/:code").get(validatePromoCode);
+router.route("/promo/track/:code").get(trackPromoLink);
 
 export default router;

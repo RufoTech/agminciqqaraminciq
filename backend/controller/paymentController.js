@@ -13,18 +13,9 @@ import catchAsyncErrors from '../middleware/catchAsyncErrors.js';
 import ErrorHandler from '../utils/errorHandler.js';
 
 
-// Stripe obyekti funksiya daxilində yaradılacaq (Lazy Initialization).
-// Bu, app.js-də mühit dəyişənlərinin yüklənmə sırasından asılılığı azaldır.
-let stripeInstance;
-const getStripe = () => {
-    if (!stripeInstance) {
-        if (!process.env.STRIPE_SECRET_KEY) {
-            throw new Error("STRIPE_SECRET_KEY təyin edilməyib! .env faylını yoxlayın.");
-        }
-        stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY);
-    }
-    return stripeInstance;
-};
+// Stripe obyekti bir dəfə yaradılır — bütün funksiyalar bunu istifadə edir (Singleton).
+// process.env.STRIPE_SECRET_KEY — .env faylındakı gizli açar (sk_test_... və ya sk_live_...)
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 
 // =====================================================================
@@ -100,9 +91,6 @@ export const createPaymentIntent = catchAsyncErrors(async (req, res, next) => {
     //
     // metadata Stripe dashboard-da görünür — ödənişi hansı istifadəçiyə
     // aid olduğunu izləmək üçün faydalıdır.
-    // getStripe() — lazım olduqda Stripe-ı initialize edir.
-    const stripe = getStripe();
-
     const paymentIntent = await stripe.paymentIntents.create({
         amount:   amountInCents,
         currency: selectedCurrency,
