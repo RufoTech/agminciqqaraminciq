@@ -90,6 +90,6 @@ const sellerBalanceSchema = new mongoose.Schema(
 );
 
 // sellerId üzrə tez axtarış üçün indeks
-sellerBalanceSchema.index({ sellerId: 1 });
+
 
 export default mongoose.model("SellerBalance", sellerBalanceSchema);

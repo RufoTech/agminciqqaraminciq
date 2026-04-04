@@ -2,6 +2,11 @@
 // hər controller-ə try/catch yazmaqdan xilas edir.
 import catchAsyncErrors from "../middleware/catchAsyncErrors.js";
 
+// Bonus inteqrasiyası
+import { awardCartBonus, awardReferralBonus, consumeBonusFifo } from "./bonusController.js";
+import BonusConfig from "../model/BonusConfig.js";
+import User from "../model/User.js";
+
 // ErrorHandler — özəl xəta sinifi.
 // new ErrorHandler("mesaj", statusKod) şəklində istifadə olunur.
 import ErrorHandler from "../utils/errorHandler.js";
@@ -52,7 +57,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 // =====================================================================
 export const createOrder = catchAsyncErrors(async (req, res, next) => {
 
-    const { stripePaymentIntentId, currency } = req.body;
+    const { stripePaymentIntentId, currency, bonusUsed = 0 } = req.body;
     const userId = req.user.id;
 
     // PaymentIntent ID olmadan sifariş yaratmaq olmaz —
@@ -131,6 +136,19 @@ export const createOrder = catchAsyncErrors(async (req, res, next) => {
         (sum, item) => sum + item.price * item.quantity, 0
     );
 
+    // ── BONUS VALİDASİYASI ──────────────────────────────────────────
+    // bonusUsed göndərilmişsə — limit yoxlanılır (max 30%)
+    let validatedBonusUsed = 0;
+    if (bonusUsed > 0) {
+        const bConfig = await BonusConfig.getConfig();
+        const maxBonus = Math.floor((totalAmount * bConfig.maxRedemptionPercent) / 100 / bConfig.bonusValueAzn);
+        validatedBonusUsed = Math.min(bonusUsed, maxBonus);
+        const userDoc = await User.findById(userId);
+        if (userDoc && userDoc.bonusBalance < validatedBonusUsed) {
+            validatedBonusUsed = userDoc.bonusBalance;
+        }
+    }
+
     // ── SİFARİŞ YARAT ────────────────────────────────────────────────
     // paymentInfo.status:
     //   "paid"  → ödəniş uğurlu (real mühit)
@@ -144,8 +162,19 @@ export const createOrder = catchAsyncErrors(async (req, res, next) => {
             currency:        currency || "azn",
         },
         totalAmount,
+        bonusUsed: validatedBonusUsed,
         orderStatus: "pending",
     });
+
+    // ── BONUS FIFO İSTİFADƏ ──────────────────────────────────────────
+    // Sifariş yaradıldı — bonusları ledger-dən düş
+    if (validatedBonusUsed > 0) {
+        try {
+            await consumeBonusFifo(userId, validatedBonusUsed, order._id);
+        } catch (bonusErr) {
+            console.error("Bonus FIFO xətası (sifariş yaradıldı, bonus düşürülmədi):", bonusErr);
+        }
+    }
 
     // ── KOMİSYA HESABLAMA ────────────────────────────────────────────
     // Hər satıcının cəmi ayrıca hesablanır — bir sifarişdə birdən çox
@@ -365,6 +394,28 @@ export const updateOrderStatus = catchAsyncErrors(async (req, res, next) => {
     }
 
     await order.save();
+
+    // ── BONUS VER (delivered olduqda) ────────────────────────────────
+    // Sifariş tamamlandı → istifadəçiyə səbət bonusu + referral bonusu verilir.
+    if (status === "delivered") {
+        try {
+            await awardCartBonus(order.user, order);
+        } catch (err) {
+            console.error("Səbət bonusu xətası:", err);
+        }
+        try {
+            // Referral: yalnız istifadəçinin İLK tamamlanmış sifarişidirsə
+            const completedCount = await Order.countDocuments({
+                user:        order.user,
+                isCompleted: true,
+            });
+            if (completedCount === 1) {
+                await awardReferralBonus(order.user);
+            }
+        } catch (err) {
+            console.error("Referral bonus xətası:", err);
+        }
+    }
 
     // İstifadəçiyə bildiriş göndərilir: "Sifarişiniz yola düşdü" kimi mesajlar.
     // order.user — sifarişi verən istifadəçinin ID-si.

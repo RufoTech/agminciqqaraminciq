@@ -86,7 +86,12 @@ import {
     Gifts_Sets, Gifts_Souvenir, Gifts_Trending, Gifts_Books,
 } from "../model/Product.js";
 
-import { notifyFavoritePriceChange } from "../utils/notificationHelper.js";
+import {
+    notifyFavoritePriceChange,
+    notifyProductCreated,
+    notifyProductDeleted,
+    notifyNewReview,
+} from "../utils/notificationHelper.js";
 
 
 // =====================================================================
@@ -432,7 +437,13 @@ export const deleteProduct = catchAsyncErrors(async (req, res, next) => {
         }
     }
 
+    const productName = product.name;
     await Product.deleteOne({ _id: req.params.id });
+
+    // Satıcıya məhsul silindi bildirişi göndər
+    if (req.user) {
+        notifyProductDeleted(req.user, productName).catch(() => {});
+    }
 
     res.status(200).json({ success: true, message: "Məhsul uğurla silindi" });
 });
@@ -483,6 +494,11 @@ export const newProduct = catchAsyncErrors(async (req, res, next) => {
     }
 
     const product = await Model.create({ ...normalizedPayload, images });
+
+    // Satıcıya məhsul yaradıldı bildirişi göndər
+    if (req.user) {
+        notifyProductCreated(req.user, product).catch(() => {});
+    }
 
     res.status(201).json({ success: true, product });
 });
@@ -693,6 +709,20 @@ export const createOrUpdateReview = catchAsyncErrors(async (req, res, next) => {
     }
 
     await product.save({ validateBeforeSave: false });
+
+    // Yeni rəy əlavə edildikdə (yalnız birinci rəy zamanı deyil, hər yeni rəydə)
+    // məhsulun satıcısına bildiriş göndər
+    if (!isReviewed) {
+        try {
+            const Admin = (await import("../model/Admin.js")).default;
+            const seller = await Admin.findOne({ "sellerInfo.storeName": product.seller }).select("_id");
+            if (seller) {
+                notifyNewReview(seller, product, req.user.name).catch(() => {});
+            }
+        } catch (err) {
+            console.error("Review notification xəta:", err.message);
+        }
+    }
 
     res.status(200).json({ success: true, message: "Rəy uğurla əlavə edildi" });
 });

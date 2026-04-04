@@ -10,6 +10,7 @@ import SuperAdmin from "../model/SuperAdmin.js";
 // Admin — satıcı/mağaza sahibi modeli.
 // SuperAdmin bu modeli tam idarə edir.
 import Admin from "../model/Admin.js";
+import User  from "../model/User.js";
 
 // ErrorHandler — özəl xəta sinifi.
 // new ErrorHandler("mesaj", statusKod) şəklində istifadə olunur.
@@ -497,4 +498,182 @@ export const superAdminResetPassword = catchAsyncErrors(async (req, res, next) =
 
     // Şifrə yeniləndi — dərhal giriş etmiş sayılsın deyə token verilir.
     sendToken(superAdmin, 200, res);
+});
+
+// =====================================================================
+// BÜTÜN İSTİFADƏÇİLƏR — getAllUsers
+// GET /superadmin/users
+// =====================================================================
+export const getAllUsers = catchAsyncErrors(async (req, res, next) => {
+    const page  = parseInt(req.query.page)  || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip  = (page - 1) * limit;
+
+    const search = req.query.search || "";
+    const query  = search
+        ? { role: "user", $or: [
+              { name:  { $regex: search, $options: "i" } },
+              { email: { $regex: search, $options: "i" } },
+          ]}
+        : { role: "user" };
+
+    const [users, total] = await Promise.all([
+        User.find(query)
+            .select("-password -resetPasswordToken -resetPasswordExpire -phoneOtp")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit),
+        User.countDocuments(query),
+    ]);
+
+    res.status(200).json({ success: true, users, total, pages: Math.ceil(total / limit), page });
+});
+
+// =====================================================================
+// TEK İSTİFADƏÇİ — getUserById
+// GET /superadmin/users/:id
+// =====================================================================
+export const getUserById = catchAsyncErrors(async (req, res, next) => {
+    const user = await User.findById(req.params.id)
+        .select("-password -resetPasswordToken -resetPasswordExpire -phoneOtp");
+    if (!user) return next(new ErrorHandler("İstifadəçi tapılmadı", 404));
+    res.status(200).json({ success: true, user });
+});
+
+
+// =====================================================================
+// ADMİN BLOKLA — blockAdmin
+// PATCH /superadmin/admins/:id/block
+// SuperAdmin mağaza sahibini bloklayır.
+// =====================================================================
+export const blockAdmin = catchAsyncErrors(async (req, res, next) => {
+    const { reason } = req.body;
+    const admin = await Admin.findByIdAndUpdate(
+        req.params.id,
+        { isBlocked: true, blockReason: reason?.trim() || "Superadmin tərəfindən bloklandı" },
+        { new: true, runValidators: false }
+    );
+    if (!admin) return next(new ErrorHandler("Admin tapılmadı", 404));
+    res.status(200).json({ success: true, message: "Admin uğurla bloklandı", admin });
+});
+
+
+// =====================================================================
+// ADMİN BLOKDAN ÇIX — unblockAdmin
+// PATCH /superadmin/admins/:id/unblock
+// SuperAdmin bloklanmış mağaza sahibini açır.
+// =====================================================================
+export const unblockAdmin = catchAsyncErrors(async (req, res, next) => {
+    const admin = await Admin.findByIdAndUpdate(
+        req.params.id,
+        { isBlocked: false, blockReason: "" },
+        { new: true, runValidators: false }
+    );
+    if (!admin) return next(new ErrorHandler("Admin tapılmadı", 404));
+    res.status(200).json({ success: true, message: "Admin uğurla blokdan çıxarıldı", admin });
+});
+
+
+// =====================================================================
+// MƏHSUL LİMİTİ — setAdminProductLimit
+// PATCH /superadmin/admins/:id/product-limit
+// SuperAdmin mağaza sahibinin yükləyə biləcəyi maksimum məhsul sayını məhdudlaşdırır.
+// limit = 0 → məhdudiyyət yoxdur.
+// =====================================================================
+export const setAdminProductLimit = catchAsyncErrors(async (req, res, next) => {
+    const limit = Number(req.body.limit);
+    if (isNaN(limit) || limit < 0) {
+        return next(new ErrorHandler("Düzgün limit dəyəri daxil edin (0 və ya müsbət ədəd)", 400));
+    }
+    const admin = await Admin.findByIdAndUpdate(
+        req.params.id,
+        { productLimit: limit },
+        { new: true, runValidators: false }
+    );
+    if (!admin) return next(new ErrorHandler("Admin tapılmadı", 404));
+    res.status(200).json({ success: true, message: `Məhsul limiti ${limit === 0 ? "ləğv edildi" : `${limit} olaraq təyin edildi`}`, admin });
+});
+
+
+// =====================================================================
+// BÜTÜN SUPERADMİNLƏRİ GƏTİR — getAllSuperAdmins
+// GET /superadmin/superadmins
+// =====================================================================
+export const getAllSuperAdmins = catchAsyncErrors(async (req, res, next) => {
+    const superAdmins = await SuperAdmin.find()
+        .select("-password -resetPasswordToken -resetPasswordExpire")
+        .sort({ createdAt: -1 });
+    res.status(200).json({ success: true, superAdmins, total: superAdmins.length });
+});
+
+
+// =====================================================================
+// İSTİFADƏÇİ BLOKLA — blockUser
+// PATCH /superadmin/users/:id/block
+// SuperAdmin alıcını bloklayır — sisteme daxil ola bilməz.
+// =====================================================================
+export const blockUser = catchAsyncErrors(async (req, res, next) => {
+    const { reason } = req.body;
+    const user = await User.findByIdAndUpdate(
+        req.params.id,
+        {
+            isBlocked:   true,
+            blockReason: reason?.trim() || "Superadmin tərəfindən bloklandı",
+        },
+        { new: true, runValidators: false }
+    ).select("-password");
+    if (!user) return next(new ErrorHandler("İstifadəçi tapılmadı", 404));
+    res.status(200).json({ success: true, message: "İstifadəçi uğurla bloklandı", user });
+});
+
+
+// =====================================================================
+// İSTİFADƏÇİ BLOKDAN ÇIX — unblockUser
+// PATCH /superadmin/users/:id/unblock
+// =====================================================================
+export const unblockUser = catchAsyncErrors(async (req, res, next) => {
+    const user = await User.findByIdAndUpdate(
+        req.params.id,
+        { isBlocked: false, blockReason: "" },
+        { new: true, runValidators: false }
+    ).select("-password");
+    if (!user) return next(new ErrorHandler("İstifadəçi tapılmadı", 404));
+    res.status(200).json({ success: true, message: "İstifadəçi blokdan çıxarıldı", user });
+});
+
+
+// =====================================================================
+// İSTİFADƏÇİ SİL — deleteUser
+// DELETE /superadmin/users/:id
+// =====================================================================
+export const deleteUser = catchAsyncErrors(async (req, res, next) => {
+    const user = await User.findById(req.params.id);
+    if (!user) return next(new ErrorHandler("İstifadəçi tapılmadı", 404));
+    const name = user.name;
+    await user.deleteOne();
+    res.status(200).json({ success: true, message: `${name} adlı istifadəçi silindi` });
+});
+
+
+// =====================================================================
+// BLOGGER STATUS TOGGLE — toggleBloggerStatus
+// PATCH /superadmin/bloggers/:id/toggle-status
+// SuperAdmin bloggeri aktivləşdirir və ya deaktiv edir.
+// =====================================================================
+export const toggleBloggerStatus = catchAsyncErrors(async (req, res, next) => {
+    // Blogger modelini dinamik import et (ayrı controller-dədir)
+    const Blogger = (await import("../model/Blogger.js")).default;
+
+    const blogger = await Blogger.findById(req.params.id);
+    if (!blogger) return next(new ErrorHandler("Blogger tapılmadı", 404));
+
+    blogger.isActive = !blogger.isActive;
+    await blogger.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+        success:  true,
+        message:  `Blogger ${blogger.isActive ? "aktivləşdirildi" : "deaktiv edildi"}`,
+        isActive: blogger.isActive,
+        blogger,
+    });
 });

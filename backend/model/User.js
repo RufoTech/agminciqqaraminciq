@@ -120,6 +120,59 @@ const userSchema = new mongoose.Schema(
             default: "none",
         },
 
+        // ── TELEFON VƏ DOĞRULAMA ─────────────────────────────────────
+        // Adi istifadəçilər register zamanı telefon vermir.
+        // Bonus istifadəsindən əvvəl telefon doğrulanması tələb olunur.
+        phone: {
+            type:    String,
+            default: null,
+        },
+        isPhoneVerified: {
+            type:    Boolean,
+            default: false,
+        },
+        // OTP sahələri — select: false ilə gizlədilir.
+        // requestPhoneOtp zamanı doldurulur, verifyPhoneOtp sonrası silinir.
+        phoneOtp: {
+            type:   String,
+            select: false,
+        },
+        phoneOtpExpire: {
+            type: Date,
+        },
+
+        // ── REFERRAL ─────────────────────────────────────────────────
+        // referralCode — register zamanı auto-generasiya edilən 8 simvollu unikal kod.
+        // Məsələn: "A3F9B2D1"
+        // sparse: true — null/undefined dəyərlər unique indexdən istisna edilir.
+        referralCode: {
+            type:   String,
+            unique: true,
+            sparse: true,
+        },
+        // referredBy — bu istifadəçini dəvət edən istifadəçinin ID-si.
+        // Yalnız qeydiyyat zamanı ?ref=KOD parametri ötürüldükdə doldurulur.
+        referredBy: {
+            type:    mongoose.Schema.Types.ObjectId,
+            ref:     "User",
+            default: null,
+        },
+
+        // ── BONUS BALANSI ─────────────────────────────────────────────
+        // Denormalizasiya: sürətli oxuma üçün cari bonus balansı.
+        // Həqiqi mənbə: BonusTransaction ledger.
+        // syncBonusBalance() hər earn/use/expire əməliyyatından sonra yeniləyir.
+        bonusBalance: {
+            type:    Number,
+            default: 0,
+            min:     0,
+        },
+
+        // ── BLOK ─────────────────────────────────────────────────────
+        // SuperAdmin tərəfindən bloklanmış istifadəçilər sisteme daxil ola bilməz.
+        isBlocked:   { type: Boolean, default: false },
+        blockReason: { type: String,  default: ""    },
+
         // ── ŞİFRƏ SIFIRLAМА SAHƏLƏRİ ─────────────────────────────────
         // Normal hallarda undefined qalır.
         // "Şifrəmi unutdum" axınında getResetPasswordToken() tərəfindən doldurulur.

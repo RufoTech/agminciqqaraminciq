@@ -9,8 +9,10 @@ import mongoose from "mongoose";
 // Həm istifadəçilərə (User), həm adminlərə (Admin) bildiriş göndərilə bilər.
 //
 // Bildiriş növləri:
-//   İstifadəçiyə: sifariş statusu, favori qiymət dəyişikliyi, səbət
-//   Adminə:       yeni sifariş, az stok, yeni istifadəçi, komisya
+//   İstifadəçiyə: sifariş statusu, favori qiymət dəyişikliyi, səbət,
+//                 ödəniş uğurlu, xoş gəldiniz
+//   Adminə:       yeni sifariş, az stok, yeni istifadəçi, komisya,
+//                 məhsul yaradıldı, məhsul silindi, yeni rəy
 // =====================================================================
 const notificationSchema = new mongoose.Schema(
     {
@@ -46,14 +48,19 @@ const notificationSchema = new mongoose.Schema(
         // Frontend bu dəyərə görə fərqli ikon/rəng göstərə bilər.
         //
         // enum — yalnız bu dəyərlər qəbul edilir:
-        //   "order_status"      → sifariş statusu dəyişdi (istifadəçiyə)
-        //   "new_order"         → yeni sifariş gəldi (adminə)
-        //   "low_stock"         → stok 5-dən az qaldı (adminə)
-        //   "out_of_stock"      → stok tamam bitdi (adminə)
-        //   "cart_added"        → məhsul səbətə əlavə edildi (istifadəçiyə)
-        //   "favorite_price"    → favoridəki məhsulun qiyməti dəyişdi (istifadəçiyə)
-        //   "commission_earned" → yeni komisya qazanıldı (adminə)
-        //   "new_user"          → yeni istifadəçi qeydiyyat keçdi (adminə)
+        //   "order_status"         → sifariş statusu dəyişdi (istifadəçiyə)
+        //   "new_order"            → yeni sifariş gəldi (adminə)
+        //   "low_stock"            → stok 5-dən az qaldı (adminə)
+        //   "out_of_stock"         → stok tamam bitdi (adminə)
+        //   "cart_added"           → məhsul səbətə əlavə edildi (istifadəçiyə)
+        //   "favorite_price"       → favoridəki məhsulun qiyməti dəyişdi (istifadəçiyə)
+        //   "commission_earned"    → yeni komisya qazanıldı (adminə)
+        //   "new_user"             → yeni istifadəçi qeydiyyat keçdi (adminə)
+        //   "product_created"      → satıcı məhsul əlavə etdi (adminə)
+        //   "product_deleted"      → satıcı məhsul sildi (adminə)
+        //   "payment_success"      → alıcı uğurlu ödəniş etdi (istifadəçiyə)
+        //   "registration_welcome" → yeni istifadəçi xoş gəldiniz (istifadəçiyə)
+        //   "new_review"           → məhsula yeni rəy yazıldı (adminə)
         type: {
             type:     String,
             enum:     [
@@ -65,6 +72,11 @@ const notificationSchema = new mongoose.Schema(
                 "favorite_price",
                 "commission_earned",
                 "new_user",
+                "product_created",
+                "product_deleted",
+                "payment_success",
+                "registration_welcome",
+                "new_review",
             ],
             required: true,
         },
@@ -102,9 +114,10 @@ const notificationSchema = new mongoose.Schema(
         //
         // Niyə hər biri default: null?
         //   Bildiriş növündən asılı olaraq bəzi sahələr dolu, bəziləri boş olur.
-        //   "new_order"  → orderId dolu, productId null
-        //   "low_stock"  → productId dolu, orderId null
-        //   "new_user"   → hər ikisi null
+        //   "new_order"      → orderId dolu, productId null
+        //   "low_stock"      → productId dolu, orderId null
+        //   "product_created"→ productId + productImage + productName dolu
+        //   "payment_success"→ orderId + amount dolu
         //   null — sahənin mövcud amma boş olduğunu aydın göstərir.
         data: {
             // orderId — bildiriş hansı sifarişlə bağlıdır
@@ -117,6 +130,17 @@ const notificationSchema = new mongoose.Schema(
             productId: {
                 type:    mongoose.Schema.Types.ObjectId,
                 ref:     "Product",
+                default: null,
+            },
+            // productImage — məhsulun ilk şəklinin Cloudinary URL-i
+            // Frontend-də thumbnail kimi göstərilir
+            productImage: {
+                type:    String,
+                default: null,
+            },
+            // productName — məhsulun adı (silindikdən sonra da göstərmək üçün)
+            productName: {
+                type:    String,
                 default: null,
             },
             // amount — məbləğ (sifariş cəmi, komisya məbləği və s.)
@@ -132,6 +156,12 @@ const notificationSchema = new mongoose.Schema(
             // stock — qalan stok sayı (az stok bildirişlərində)
             stock: {
                 type:    Number,
+                default: null,
+            },
+            // link — detail URL (/product/:id, /my-orders, /admin/products vs.)
+            // Frontend bu linki "Ətrafla bax" düyməsi üçün istifadə edir
+            link: {
+                type:    String,
                 default: null,
             },
         },

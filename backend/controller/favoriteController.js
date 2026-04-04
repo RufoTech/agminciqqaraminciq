@@ -210,12 +210,13 @@ export const getFavoriteProducts = catchAsyncErrors(async (req, res, next) => {
             select: "name price images",
         });
 
-        // Favori siyahısı yoxdursa — 404 qaytarılır.
-        // Alternativ: boş array [] qaytarmaq daha yaxşı UX verər
-        // (siyahı yoxdur = xəta deyil, sadəcə boşdur).
-        // Hazırki hal — 404 statusu.
+        // Favori siyahısı yoxdursa — boş array [] qaytarırıq.
+        // Bu, 404-dən daha yaxşı UX verir (siyahı yoxdur = xəta deyil, sadəcə boşdur).
         if (!favorite) {
-            return next(new ErrorHandler("Hal-hazırda məhsul mövcud deyil.", 404));
+            return res.status(200).json({
+                success:   true,
+                favorites: [],
+            });
         }
 
         // Yalnız məhsullar massivi göndərilir — tam favorite obyekti deyil.

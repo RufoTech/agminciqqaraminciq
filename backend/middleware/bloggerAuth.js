@@ -8,7 +8,7 @@
 import jwt      from "jsonwebtoken";
 import catchAsyncErrors from "./catchAsyncErrors.js";
 import ErrorHandler     from "../utils/errorHandler.js";
-import Blogger  from "../models/Blogger.js";
+import Blogger  from "../model/Blogger.js";
 
 
 // ── isBloggerAuthenticated ───────────────────────────────────────────

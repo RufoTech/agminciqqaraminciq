@@ -60,7 +60,6 @@ export const isAuthenticatedUser = catchAsyncErrors(async (req, res, next) => {
         //
         // decoded = { id: "507f1f...", model: "SuperAdmin" | "Admin" | "User", iat, exp }
         const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
-        console.log(decoded); // İstehsal mühitinə keçdikdə bu logu silmək tövsiyə olunur
 
         // ── ÜÇ MƏRHƏLƏLİ KOLLEKSİYA SEÇİMİ ───────────────────────
         // Token yaradılarkən "model" sahəsi doldurulub (sendToken-da).

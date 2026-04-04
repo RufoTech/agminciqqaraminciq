@@ -47,7 +47,27 @@ export default (err, req, res, next) => {
     //   Düzgün yazılış: const message = `Resurs tapilmadi: ${err?.path}`;
     //   Amma mövcud kod işləyir, çünki ErrorHandler mesajı stringə çevirir.
     if (err.name === "CastError") {
-        const message = Object.values(`Resurs tapilmadi ${err?.path}`);
+        const message = `Resurs tapilmadi: ${err?.path}`;
+        error = new ErrorHandler(message, 400);
+    }
+
+    // ── DUPLICATE KEY XƏTASI ──────────────────────────────────────────
+    // Error code 11000 — MongoDB-də unique index (məs: email) təkrarlandıqda.
+    if (err.code === 11000) {
+        const message = `${Object.keys(err.keyValue)} artıq mövcuddur.`;
+        error = new ErrorHandler(message, 400);
+    }
+
+    // ── JWT XƏTALARI ──────────────────────────────────────────────────
+    // JsonWebTokenError — Token düzgün deyil.
+    if (err.name === "JsonWebTokenError") {
+        const message = "JWT Token yanlışdır. Yenidən cəhd edin.";
+        error = new ErrorHandler(message, 400);
+    }
+
+    // TokenExpiredError — Token-in vaxtı keçib.
+    if (err.name === "TokenExpiredError") {
+        const message = "JWT Token-in vaxtı keçib. Yenidən giriş edin.";
         error = new ErrorHandler(message, 400);
     }
 
@@ -86,27 +106,17 @@ export default (err, req, res, next) => {
     // error: err    → tam xəta obyekti (name, path, value və s.)
     // stack         → xətanın kodda harada baş verdiyini göstərir:
     //                 "Error at Product.create (/controllers/productController.js:45:10)"
-    if (process.env.NODE_ENV === "DEVELOPMENT") {
+    if (process.env.NODE_ENV === "PRODUCTION") {
+        // Production: yalnız mesaj — texniki detallar gizlədilir
         res.status(error.statusCode).json({
             message: error.message,
-            error:   err,          // tam xəta obyekti — yalnız inkişaf üçün
-            stack:   err?.stack,   // hansı faylın neçənci sətri — yalnız inkişaf üçün
         });
-    }
-
-    // ── İSTEHSAL MÜHİTİ (PRODUCTION) ────────────────────────────────
-    // Yalnız xəta mesajı göndərilir — texniki detallar gizlədilir.
-    //
-    // Niyə stack trace göndərilmir?
-    //   Hücumçu stack trace-dən fayl strukturunu, kitabxana versiyalarını,
-    //   zəif nöqtələri öyrənə bilər — təhlükəsizlik riski.
-    //
-    // Niyə tam err obyekti göndərilmir?
-    //   Verilənlər bazası adları, model strukturu, server yolları kimi
-    //   məlumatlar istifadəçiyə çatmamalıdır.
-    if (process.env.NODE_ENV === "PRODUCTION") {
+    } else {
+        // Development (və ya hər hansı digər mühit): ətraflı xəta
         res.status(error.statusCode).json({
-            message: error.message, // yalnız bu — başqa heç nə
+            message: error.message,
+            error:   err,
+            stack:   err?.stack,
         });
     }
 };

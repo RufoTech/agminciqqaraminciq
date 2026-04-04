@@ -44,6 +44,7 @@ const commissionSchema = new mongoose.Schema(
         sellerId: {
             type:     String,
             required: true,
+            index:    true,
         },
 
         // ── ÖDƏNIŞ İDENTİFİKATORLARI ─────────────────────────────────────────
@@ -53,6 +54,7 @@ const commissionSchema = new mongoose.Schema(
         pashaPayOrderId: {
             type:    String,
             default: null,
+            index:   true,         // webhook-da tez tapmaq üçün
         },
 
         // pashaPayTransactionId → uğurlu ödənişin PashaPay tranzaksiya ID-si
@@ -185,6 +187,6 @@ const commissionSchema = new mongoose.Schema(
 commissionSchema.index({ sellerId: 1, month: 1, year: 1, status: 1 });
 
 // pashaPayOrderId tez tapılsın — webhook gəldikdə bu ID ilə axtarırıq
-commissionSchema.index({ pashaPayOrderId: 1 });
+
 
 export default mongoose.model("Commission", commissionSchema);

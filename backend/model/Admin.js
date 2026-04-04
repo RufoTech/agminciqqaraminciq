@@ -111,6 +111,13 @@ const adminSchema = new mongoose.Schema(
             default: "approved",
         },
 
+        // ── BLOK VƏ LİMİT SAHƏLƏRİ ─────────────────────────────────
+        // SuperAdmin tərəfindən admin bloklanıb/açıla bilər.
+        // productLimit = 0 → limit yoxdur; > 0 → maksimum məhsul sayı.
+        isBlocked:    { type: Boolean, default: false },
+        blockReason:  { type: String,  default: "" },
+        productLimit: { type: Number,  default: 0 },
+
         // ── ŞİFRƏ SIFIRLAМА SAHƏLƏRİ ────────────────────────────────
         // Bu sahələr yalnız "şifrəmi unutdum" axınında doldurulur.
         // Normal hallarda undefined qalır — bazada yer tutmur.
