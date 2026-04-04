@@ -63,9 +63,11 @@ export default (user, statusCode, res, extraData = {}) => {
     //   Brauzer cross-origin sorğularda cookie-ni göndərmirdi →
     //   isAuthenticatedUser token tapa bilmirdi → 401 qaytarırdı.
     const isProduction = process.env.NODE_ENV === "PRODUCTION";
+    // COOKIE_EXPIRES_TIME yoxlanılır (default: 7 gün)
+    const expiresDays = Number(process.env.COOKIE_EXPIRES_TIME) || 7;
 
     const options = {
-        expires:  new Date(Date.now() + process.env.COOKIE_EXPIRES_TIME * 24 * 60 * 60 * 1000),
+        expires:  new Date(Date.now() + expiresDays * 24 * 60 * 60 * 1000),
         httpOnly: true,
         sameSite: isProduction ? "none" : "lax",
         secure:   isProduction,

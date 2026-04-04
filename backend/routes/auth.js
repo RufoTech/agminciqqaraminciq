@@ -10,6 +10,7 @@ import {
     forgotPassword,
     resetPassword,
     getStoreBySlug,
+    getStoreSlugBySeller,
 } from "../controller/authController.js";
 
 
@@ -82,6 +83,7 @@ router.put("/password/reset/:token", resetPassword);
 //   Mağaza məlumatları + həmin mağazanın məhsulları qaytarılır.
 // =====================================================================
 router.get("/store/:slug", getStoreBySlug);
+router.get("/store-by-seller/:name", getStoreSlugBySeller);
 
 
 export default router;

@@ -16,6 +16,14 @@ import express from "express";
 // process.env-ə yükləyən kitabxana.
 import dotenv from "dotenv";
 
+// helmet — HTTP cavab başlıqlarını təhlükəsizlik üçün avtomatik tənzimləyir.
+// XSS, clickjacking, MIME sniffing kimi hücumlara qarşı qoruyur.
+import helmet from "helmet";
+
+// express-rate-limit — IP əsaslı sorğu limiti.
+// Brute force hücumları üçün auth endpoint-ləri qoruyur.
+import rateLimit from "express-rate-limit";
+
 // connectDatabase — MongoDB-yə qoşulma funksiyası (dbConnect.js-dən).
 import { connectDatabase } from "./config/dbConnect.js";
 
@@ -27,6 +35,12 @@ import cors from "cors";
 // cookie-parser — req.cookies-i oxunaqlı edir.
 // Token cookie-dədir — bu middleware olmasa req.cookies.token undefined olar.
 import cookieParser from "cookie-parser";
+
+// compression — HTTP cavablarını gzip/brotli ilə sıxır → bandwidth azalır.
+import compression from "compression";
+
+// morgan — HTTP sorğu loqlaması. Development-da debug üçün vacibdir.
+import morgan from "morgan";
 
 // path, fileURLToPath — ES Module-da __dirname əl ilə yaratmaq üçün.
 import path from "path";
@@ -40,6 +54,8 @@ import userRouter        from "./routes/auth.js";
 import paymentRoutes     from "./routes/paymentRoutes.js";
 import orderRoutes       from "./routes/orderRoutes.js";
 import commissionRoutes  from "./routes/commissionRoutes.js";
+import bloggerRoutes     from "./routes/bloggerRoutes.js";
+import bonusRoutes       from "./routes/bonusRoutes.js";
 
 // errorsMiddleware — bütün xətaları mərkəzi idarə edir.
 // Bu middleware route-lardan SONRA qeyd edilməlidir.
@@ -89,26 +105,78 @@ connectDatabase();
 // Sıra vacibdir — yuxarıdan aşağıya işlənir.
 // =====================================================================
 
+// ── MORGAN — HTTP LOQLAMA ─────────────────────────────────────────────
+// development: rəngli, insan oxunaqlı format
+// production:  combined format (Apache-uyğun, log kolleksiyası üçün)
+if (process.env.NODE_ENV !== "PRODUCTION") {
+    app.use(morgan("dev"));
+} else {
+    app.use(morgan("combined"));
+}
+
+// ── COMPRESSION — CAVABLARI SIXIN ────────────────────────────────────
+// gzip/brotli ilə sıxma → JSON cavablar ~70% kiçilir → sürət artır
+app.use(compression());
+
+// ── HELMET — TƏHLÜKƏSİZLİK BAŞLIQLAR ────────────────────────────────
+// helmet() — bir sıra HTTP başlıqları əlavə edir:
+//   X-Frame-Options: DENY         → clickjacking
+//   X-Content-Type-Options: nosniff → MIME sniffing
+//   Strict-Transport-Security     → HTTPS məcburi
+//   X-XSS-Protection              → köhnə brauzerlər üçün XSS
+//
+// contentSecurityPolicy: false — Cloudinary, Google Fonts kimi
+//   xarici resurslara keçid olduğundan CSP deaktiv edilir.
+//   Production-da öz CSP siyasətini yaz.
+app.use(helmet({ contentSecurityPolicy: false }));
+
+// ── RATE LIMITING — BRUTE FORCE QORUNMASI ────────────────────────────
+// Yalnız PRODUCTION-da aktiv — development-da limit yoxdur.
+// windowMs: 15 dəqiqə ərzində max 30 cəhd.
+if (process.env.NODE_ENV === "PRODUCTION") {
+    const authLimiter = rateLimit({
+        windowMs: 15 * 60 * 1000,
+        max:      30,
+        message:  { success: false, message: "Çox sayda giriş cəhdi. 15 dəqiqə sonra yenidən cəhd edin." },
+        standardHeaders: true,
+        legacyHeaders:   false,
+    });
+    app.use("/commerce/mehsullar/superadmin/login",    authLimiter);
+    app.use("/commerce/mehsullar/superadmin/register", authLimiter);
+    app.use("/commerce/mehsullar/blogger/login",       authLimiter);
+    app.use("/commerce/mehsullar/blogger/register",    authLimiter);
+    app.use("/commerce/mehsullar/login",               authLimiter);
+    app.use("/commerce/mehsullar/register",            authLimiter);
+}
+
 // ── CORS ─────────────────────────────────────────────────────────────
-// origin: "http://localhost:5173" — yalnız bu frontend-dən gələn
-//   sorğulara icazə verilir. Başqa domain-lərdən gələn sorğular bloklanır.
-//
-// methods — icazə verilən HTTP metodları.
-//
-// credentials: true — cookie-lərin cross-origin sorğularda göndərilməsinə
-//   icazə verir. Bu olmasa token cookie-si frontend-ə çatmaz.
-//   Frontend-də də: axios.defaults.withCredentials = true olmalıdır.
+// FRONTEND_URL və CLIENT_URL hər ikisi qəbul edilir.
+// Development-da localhost:5173 həmişə icazəlidir.
+const rawOrigins = [
+    process.env.FRONTEND_URL,
+    process.env.CLIENT_URL,
+    "http://localhost:5173",
+    "http://localhost:3000",
+].filter(Boolean);
+
+const allowedOrigins = [...new Set(
+    rawOrigins.flatMap(o => o.split(",").map(s => s.trim()))
+)];
+
 app.use(cors({
-    origin:      "http://localhost:5173",
-    methods:     ["GET", "POST", "PUT", "DELETE"],
+    origin: (origin, cb) => {
+        if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+        cb(new Error(`CORS: ${origin} icazəli deyil`));
+    },
+    methods:     ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
 }));
 
 // ── JSON PARSER ──────────────────────────────────────────────────────
-// req.body-ni oxunaqlı edir.
+// req.body-ni oxunaqlı edir. limit: 10mb — böyük JSON yüklərindən qorunma.
 // Olmasa: POST/PUT sorğularında req.body = undefined.
-// Məsələn: { "email": "user@test.com" } → req.body.email = "user@test.com"
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // ── COOKIE PARSER ────────────────────────────────────────────────────
 // req.cookies-i oxunaqlı edir.
@@ -165,6 +233,12 @@ app.use("/commerce/mehsullar/commission", commissionRoutes);
 
 // Bildiriş route-ları: gör, oxunmuş et, sil
 app.use("/commerce/mehsullar/notifications", notificationRoutes);
+
+// Blogger route-ları: qeydiyyat, giriş, profil, satışlar, admin idarəetməsi
+app.use("/commerce/mehsullar", bloggerRoutes);
+
+// Bonus route-ları: balans, əməliyyatlar, admin konfiqurasiya
+app.use("/commerce/mehsullar/bonus", bonusRoutes);
 
 
 // =====================================================================

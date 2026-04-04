@@ -27,10 +27,11 @@ import {
     // Public
     validatePromoCode,
     trackPromoLink,
-} from "../controllers/bloggerController.js";
+} from "../controller/bloggerController.js";
 
 import { isBloggerAuthenticated } from "../middleware/bloggerAuth.js";
-import { isAuthenticatedUser, authorizeRoles } from "../middleware/auth.js"; // mövcud admin auth
+// authMiddleware SuperAdmin tokenini də tanıyır (auth.js yalnız Admin/User-i tanıyır)
+import { isAuthenticatedUser, authorizeRoles } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -38,30 +39,30 @@ const router = express.Router();
 // Bütün admin route-ları isAuthenticatedUser + "admin" rolu tələb edir.
 
 router.route("/superadmin/bloggers/stats/overview")
-    .get(isAuthenticatedUser, authorizeRoles("admin"), getBloggersOverview);
+    .get(isAuthenticatedUser, authorizeRoles("admin", "superadmin"), getBloggersOverview);
 
 router.route("/superadmin/bloggers")
-    .get(isAuthenticatedUser, authorizeRoles("admin"), getAllBloggers);
+    .get(isAuthenticatedUser, authorizeRoles("admin", "superadmin"), getAllBloggers);
 
 router.route("/superadmin/bloggers/create")
-    .post(isAuthenticatedUser, authorizeRoles("admin"), createBlogger);
+    .post(isAuthenticatedUser, authorizeRoles("admin", "superadmin"), createBlogger);
 
 router.route("/superadmin/bloggers/:id")
-    .get(isAuthenticatedUser, authorizeRoles("admin"), getBloggerById)
-    .put(isAuthenticatedUser, authorizeRoles("admin"), updateBlogger)
-    .delete(isAuthenticatedUser, authorizeRoles("admin"), deleteBlogger);
+    .get(isAuthenticatedUser, authorizeRoles("admin", "superadmin"), getBloggerById)
+    .put(isAuthenticatedUser, authorizeRoles("admin", "superadmin"), updateBlogger)
+    .delete(isAuthenticatedUser, authorizeRoles("admin", "superadmin"), deleteBlogger);
 
 router.route("/superadmin/bloggers/:id/commission")
-    .put(isAuthenticatedUser, authorizeRoles("admin"), updateCommissionRate);
+    .put(isAuthenticatedUser, authorizeRoles("admin", "superadmin"), updateCommissionRate);
 
 router.route("/superadmin/bloggers/:id/commission-duration")
-    .put(isAuthenticatedUser, authorizeRoles("admin"), updateCommissionDuration);
+    .put(isAuthenticatedUser, authorizeRoles("admin", "superadmin"), updateCommissionDuration);
 
 router.route("/superadmin/bloggers/:id/regen-promo")
-    .put(isAuthenticatedUser, authorizeRoles("admin"), regenPromoCode);
+    .put(isAuthenticatedUser, authorizeRoles("admin", "superadmin"), regenPromoCode);
 
 router.route("/superadmin/bloggers/:id/pay-commission")
-    .post(isAuthenticatedUser, authorizeRoles("admin"), payCommission);
+    .post(isAuthenticatedUser, authorizeRoles("admin", "superadmin"), payCommission);
 
 // ── BLOGER ROUTES ─────────────────────────────────────────────────────
 router.route("/blogger/register").post(registerBlogger);
