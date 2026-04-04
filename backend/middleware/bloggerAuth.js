@@ -22,7 +22,8 @@ export const isBloggerAuthenticated = catchAsyncErrors(async (req, res, next) =>
 
     let decoded;
     try {
-        decoded = jwt.verify(token, process.env.JWT_SECRET);
+        // JWT_SECRET_KEY — Blogger.jwtTokeniEldeEt() ilə eyni açar
+        decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
     } catch {
         return next(new ErrorHandler("Token etibarsızdır və ya müddəti bitib.", 401));
     }

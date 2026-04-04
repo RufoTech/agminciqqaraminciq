@@ -190,6 +190,18 @@ bloggerSchema.pre("save", function (next) {
 
 
 // =====================================================================
+// VİRTUAL SAHƏLƏRİ
+// =====================================================================
+
+// name — sendToken.js user.name oxuyur; Blogger-də firstName+lastName var.
+// virtual toJSON-a daxil olmur default olaraq — toObject({virtuals:true}) lazımdır.
+// sendToken userResponse-da birbaşa user.name oxuduğundan burada getter kifayətdir.
+bloggerSchema.virtual("name").get(function () {
+    return `${this.firstName} ${this.lastName}`.trim();
+});
+
+
+// =====================================================================
 // METODLAR
 // =====================================================================
 
@@ -199,12 +211,18 @@ bloggerSchema.methods.comparePassword = async function (enteredPassword) {
 };
 
 // ── JWT token yarat ───────────────────────────────────────────────────
-bloggerSchema.methods.getJwtToken = function () {
+// jwtTokeniEldeEt — sendToken.js bu metodu çağırır (User/Admin ilə uyğun ad)
+bloggerSchema.methods.jwtTokeniEldeEt = function () {
     return jwt.sign(
         { id: this._id, role: this.role },
-        process.env.JWT_SECRET,
+        process.env.JWT_SECRET_KEY,
         { expiresIn: process.env.JWT_EXPIRES_TIME || "7d" }
     );
+};
+
+// getJwtToken — köhnə ad, geri uyğunluq üçün saxlanılır
+bloggerSchema.methods.getJwtToken = function () {
+    return this.jwtTokeniEldeEt();
 };
 
 // ── Şifrə sıfırlama tokeni yarat ─────────────────────────────────────
