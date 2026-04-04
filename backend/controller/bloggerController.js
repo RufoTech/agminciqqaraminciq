@@ -493,7 +493,7 @@ export const bloggerLogout = catchAsyncErrors(async (req, res, next) => {
 //  GET /commerce/mehsullar/blogger/profile
 // ─────────────────────────────────────────────────────────────────────
 export const getBloggerProfile = catchAsyncErrors(async (req, res, next) => {
-    const blogger = await Blogger.findById(req.blogger._id).select("-password");
+    const blogger = await Blogger.findById(req.user._id).select("-password");
 
     // Son 6 aylıq aylıq satış xülasəsi
     const sixMonthsAgo = new Date();
@@ -574,7 +574,7 @@ export const getBloggerSales = catchAsyncErrors(async (req, res, next) => {
     const limit = Math.min(100, parseInt(req.query.limit) || 20);
     const skip  = (page - 1) * limit;
 
-    const filter = { blogger: req.blogger._id };
+    const filter = { blogger: req.user._id };
 
     if (req.query.status) {
         filter.paymentStatus = req.query.status;

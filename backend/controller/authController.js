@@ -9,8 +9,13 @@ import catchAsyncErrors from "../middleware/catchAsyncErrors.js";
 import User from "../model/User.js";
 
 // Admin — satıcı/admin istifadəçilər üçün ayrı MongoDB modeli ("admins" kolleksiyası)
-// Niyə ayrı model? Çünki adminin əlavə məlumatları var: mağaza adı, vergi nömrəsi və s.
 import Admin from "../model/Admin.js";
+
+// SuperAdmin — sistem idarəçisi modeli
+import SuperAdmin from "../model/SuperAdmin.js";
+
+// Blogger — bloger/referral sistemi istifadəçisi modeli
+import Blogger from "../model/Blogger.js";
 
 // ErrorHandler — özəl xəta sinifi. new ErrorHandler("mesaj", statusKod)
 // şəklində istifadə olunur və xəta middleware-inə ötürülür.
@@ -165,6 +170,28 @@ export const registerUser = catchAsyncErrors(async (req, res, next) => {
         });
     }
 
+    // ── BLOGER QEYDİYYATI ─────────────────────────────────────────────
+    if (role === "blogger") {
+        // İsim və Soyad ayırma (Blogger modelifirstName və lastName tələb edir)
+        const nameParts = name.trim().split(" ");
+        const firstName = nameParts[0] || "Bloger";
+        const lastName  = nameParts.slice(1).join(" ") || "İstifadəçisi";
+
+        const user = await Blogger.create({
+            firstName,
+            lastName,
+            email,
+            password,
+            commissionRate:     40, // Default komissiya
+            commissionDuration: 6,  // 6 ay müddət
+            isActive:           true,
+        });
+
+        return sendToken(user, 201, res, {
+            message: "Bloger hesabı uğurla yaradıldı",
+        });
+    }
+
     // ── ADİ İSTİFADƏÇİ QEYDİYYATI ────────────────────────────────────
     // role = "admin" deyilsə bu hissə işləyir.
     // Yalnız əsas məlumatlar saxlanılır, role məcburən "user" təyin edilir —
@@ -290,8 +317,12 @@ export const login = catchAsyncErrors(async (req, res, next) => {
     // ilə gizlədilir. Giriş zamanı şifrəni müqayisə etmək üçün açıq istəmək lazımdır.
     let user = null;
 
-    if (role === "admin") {
-        // Yalnız Admin (satıcı) kolleksiyasında axtar
+    if (role === "superadmin") {
+        user = await SuperAdmin.findOne({ email }).select("+password");
+        if (!user) {
+            return next(new ErrorHandler("Superadmin hesabı tapılmadı.", 401));
+        }
+    } else if (role === "admin") {
         user = await Admin.findOne({ email }).select("+password");
         if (!user) {
             return next(new ErrorHandler(
@@ -299,8 +330,15 @@ export const login = catchAsyncErrors(async (req, res, next) => {
                 401
             ));
         }
+    } else if (role === "blogger") {
+        user = await Blogger.findOne({ email }).select("+password");
+        if (!user) {
+            return next(new ErrorHandler("Bloger hesabı tapılmadı.", 401));
+        }
+        if (!user.isActive) {
+            return next(new ErrorHandler("Hesabınız deaktiv edilib. Adminlə əlaqə saxlayın.", 403));
+        }
     } else {
-        // Yalnız User (alıcı) kolleksiyasında axtar
         user = await User.findOne({ email }).select("+password");
         if (!user) {
             return next(new ErrorHandler(
@@ -367,8 +405,14 @@ export const logout = catchAsyncErrors(async (req, res, next) => {
 // =====================================================================
 export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
 
-    // Eyni iki mərhələli axtarış: əvvəlcə Admin, sonra User
-    let user = await Admin.findOne({ email: req.body.email });
+    // Dörd mərhələli axtarış: SuperAdmin -> Admin -> Blogger -> User
+    let user = await SuperAdmin.findOne({ email: req.body.email });
+    if (!user) {
+        user = await Admin.findOne({ email: req.body.email });
+    }
+    if (!user) {
+        user = await Blogger.findOne({ email: req.body.email });
+    }
     if (!user) {
         user = await User.findOne({ email: req.body.email });
     }
@@ -443,12 +487,23 @@ export const resetPassword = catchAsyncErrors(async (req, res, next) => {
         .update(req.params.token)
         .digest("hex");
 
-    // $gt: Date.now() — token-in müddəti keçməyib şərti
-    // Eyni iki mərhələli axtarış: əvvəlcə Admin, sonra User
-    let user = await Admin.findOne({
+    // Dörd mərhələli axtarış: SuperAdmin -> Admin -> Blogger -> User
+    let user = await SuperAdmin.findOne({
         resetPasswordToken,
         resetPasswordExpire: { $gt: Date.now() },
     });
+    if (!user) {
+        user = await Admin.findOne({
+            resetPasswordToken,
+            resetPasswordExpire: { $gt: Date.now() },
+        });
+    }
+    if (!user) {
+        user = await Blogger.findOne({
+            resetPasswordToken,
+            resetPasswordExpire: { $gt: Date.now() },
+        });
+    }
     if (!user) {
         user = await User.findOne({
             resetPasswordToken,

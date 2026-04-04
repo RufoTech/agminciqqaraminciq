@@ -96,7 +96,7 @@ export default (user, statusCode, res, extraData = {}) => {
     //   __v, createdAt     → texniki sahələr
     const userResponse = {
         id:           user._id,
-        name:         user.name,
+        name:         user.name || `${user.firstName || ""} ${user.lastName || ""}`.trim(),
         email:        user.email,
         role:         user.role,
         // sellerStatus — mövcud deyilsə (User modelində "none" default) null göndər

@@ -4,7 +4,7 @@ import { useRegisterMutation } from '../redux/api/authApi'
 import {
   User, Mail, Lock, Eye, EyeOff, ArrowRight, Loader2,
   CheckCircle, Store, MapPin, Phone, FileText, Hash,
-  Copy, ExternalLink
+  Copy, ExternalLink, TrendingUp
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -204,10 +204,11 @@ const Register = () => {
         .reg-logo-name span { color: #E8192C; }
         .reg-heading { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; color: #111; line-height: 1.2; margin: 0 0 6px; }
         .reg-sub { font-size: 13px; color: #888; margin: 0 0 24px; }
-        .role-toggle { display: flex; background: #f4f4f4; border-radius: 12px; padding: 4px; margin-bottom: 24px; gap: 4px; }
-        .role-btn { flex: 1; padding: 10px 12px; border: none; border-radius: 9px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; background: transparent; color: #888; transition: all 0.22s ease; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .role-toggle { display: flex; flex-wrap: wrap; background: #f4f4f4; border-radius: 12px; padding: 4px; margin-bottom: 24px; gap: 4px; }
+        .role-btn { flex: 1 1 calc(33.33% - 4px); padding: 8px 10px; border: none; border-radius: 9px; font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; background: transparent; color: #888; transition: all 0.22s ease; display: flex; align-items: center; justify-content: center; gap: 4px; }
         .role-btn.active { background: #fff; color: #E8192C; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
         .role-btn:hover:not(.active) { color: #555; }
+        @media (max-width: 480px) { .role-btn { flex: 1 1 calc(50% - 4px); } }
         .reg-form { display: flex; flex-direction: column; gap: 15px; }
         .reg-label { display: block; font-size: 12px; font-weight: 500; color: #444; margin-bottom: 5px; }
         .reg-input-wrap { position: relative; }
@@ -253,11 +254,14 @@ const Register = () => {
           <p className="reg-sub">Bütün imkanlardan yararlanmaq üçün qeydiyyatdan keçin.</p>
 
           <div className="role-toggle">
-            <button type="button" className={`role-btn ${!isAdmin ? 'active' : ''}`} onClick={() => handleRoleChange('user')}>
+            <button type="button" className={`role-btn ${formData.role === 'user' ? 'active' : ''}`} onClick={() => handleRoleChange('user')}>
               <User size={14} /> Alıcı
             </button>
-            <button type="button" className={`role-btn ${isAdmin ? 'active' : ''}`} onClick={() => handleRoleChange('admin')}>
-              <Store size={14} /> Satıcı / Admin
+            <button type="button" className={`role-btn ${formData.role === 'admin' ? 'active' : ''}`} onClick={() => handleRoleChange('admin')}>
+              <Store size={14} /> Satıcı
+            </button>
+            <button type="button" className={`role-btn ${formData.role === 'blogger' ? 'active' : ''}`} onClick={() => handleRoleChange('blogger')}>
+              <TrendingUp size={14} /> Bloqer
             </button>
           </div>
 

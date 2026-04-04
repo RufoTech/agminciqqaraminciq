@@ -12,7 +12,7 @@ import {
 } from "../controller/notificationController.js";
 
 // isAuthenticatedUser — JWT token yoxlayır, req.user-ə yazır.
-import { isAuthenticatedUser } from "../middleware/authMiddleware.js";
+import { isAuthenticatedUser } from "../middleware/auth.js";
 
 
 // =====================================================================

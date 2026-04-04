@@ -29,9 +29,11 @@ import {
     trackPromoLink,
 } from "../controller/bloggerController.js";
 
-import { isBloggerAuthenticated } from "../middleware/bloggerAuth.js";
-// authMiddleware SuperAdmin tokenini də tanıyır (auth.js yalnız Admin/User-i tanıyır)
-import { isAuthenticatedUser, authorizeRoles } from "../middleware/authMiddleware.js";
+import { 
+    isAuthenticatedUser, 
+    authorizeRoles, 
+    isBlogger 
+} from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -70,10 +72,10 @@ router.route("/blogger/login").post(bloggerLogin);
 router.route("/blogger/logout").get(bloggerLogout);
 
 router.route("/blogger/profile")
-    .get(isBloggerAuthenticated, getBloggerProfile);
+    .get(isAuthenticatedUser, isBlogger, getBloggerProfile);
 
 router.route("/blogger/sales")
-    .get(isBloggerAuthenticated, getBloggerSales);
+    .get(isAuthenticatedUser, isBlogger, getBloggerSales);
 
 // ── PUBLIC ROUTES ─────────────────────────────────────────────────────
 router.route("/promo/validate/:code").get(validatePromoCode);

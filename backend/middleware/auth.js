@@ -17,6 +17,12 @@ import User from "../model/User.js";
 // Token yaradılarkən hansı kolleksiyadan olduğu "model" sahəsi ilə işarələnir.
 import Admin from "../model/Admin.js";
 
+// SuperAdmin — sistem idarəçisi modeli ("superadmins" kolleksiyası).
+import SuperAdmin from "../model/SuperAdmin.js";
+
+// Blogger — bloger/referral sistemi istifadəçisi modeli ("bloggers" kolleksiyası).
+import Blogger from "../model/Blogger.js";
+
 
 // =====================================================================
 // İSTİFADƏÇİ DOĞRULAMASI — isAuthenticatedUser
@@ -104,8 +110,12 @@ export const isAuthenticatedUser = catchAsyncErrors(async (req, res, next) => {
         //   Admin — mağaza məlumatları (sellerInfo) kimi əlavə sahələrə malikdir.
         //   User  — adi alıcı istifadəçilərdir.
         //   Hər ikisi eyni giriş formasından istifadə edir.
-        if (decoded.model === "Admin") {
+        if (decoded.model === "SuperAdmin") {
+            req.user = await SuperAdmin.findById(decoded.id);
+        } else if (decoded.model === "Admin") {
             req.user = await Admin.findById(decoded.id);
+        } else if (decoded.model === "Blogger") {
+            req.user = await Blogger.findById(decoded.id);
         } else {
             req.user = await User.findById(decoded.id);
         }
@@ -238,5 +248,31 @@ export const isApprovedSeller = catchAsyncErrors(async (req, res, next) => {
     }
 
     // Hər iki şərt ödəndi — növbəti middleware/controller-ə keç
+    next();
+});
+
+// =====================================================================
+// YALNIZ SUPERADMIN ÜÇÜN — isSuperAdmin
+// ---------------------------------------------------------------------
+export const isSuperAdmin = catchAsyncErrors(async (req, res, next) => {
+    if (!req.user) {
+        return next(new ErrorHandler("Giriş tələb olunur", 401));
+    }
+    if (req.user.role !== "superadmin") {
+        return next(new ErrorHandler("Bu əməliyyat yalnız superadmin üçündür", 403));
+    }
+    next();
+});
+
+// =====================================================================
+// YALNIZ BLOGER ÜÇÜN — isBlogger
+// ---------------------------------------------------------------------
+export const isBlogger = catchAsyncErrors(async (req, res, next) => {
+    if (!req.user) {
+        return next(new ErrorHandler("Giriş tələb olunur", 401));
+    }
+    if (req.user.role !== "blogger") {
+        return next(new ErrorHandler("Bu əməliyyat yalnız blogerlər üçündür", 403));
+    }
     next();
 });

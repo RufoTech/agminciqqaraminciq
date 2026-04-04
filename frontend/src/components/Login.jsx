@@ -47,7 +47,7 @@ const Login = () => {
 
       toast.success('Xoş gəldiniz! Giriş uğurludur.')
 
-      // Admin ise mağaza ekranı göstər, deyilse /home-a yönləndir
+      // Rolə görə yönləndirmə
       if (formData.role === 'admin') {
         const storeSlug = result?.storeSlug || result?.store?.slug || result?.user?.storeSlug
         const storeName = result?.storeName || result?.store?.name || result?.user?.storeName || 'Mağazanız'
@@ -58,6 +58,10 @@ const Login = () => {
             : null,
           storeSlug,
         })
+      } else if (formData.role === 'superadmin') {
+        navigate('/admin/products') // Superadmin üçün ilkin səhifə
+      } else if (formData.role === 'blogger') {
+        navigate('/home') // Bloger üçün hələlik home, gələcəkdə profil
       } else {
         navigate('/home')
       }
@@ -297,14 +301,8 @@ const Login = () => {
         @media (max-width: 640px) { .auth-heading { font-size: 22px; } }
         .auth-sub { font-size: 14px; color: #888; margin-bottom: 28px; }
 
-        .role-toggle { display: flex; background: #f4f4f4; border-radius: 12px; padding: 4px; margin-bottom: 24px; gap: 4px; }
-        .role-btn {
-          flex: 1; padding: 11px; border: none; border-radius: 9px;
-          font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
-          cursor: pointer; background: transparent; color: #888;
-          display: flex; align-items: center; justify-content: center; gap: 6px;
-          transition: all 0.25s ease;
-        }
+        .role-toggle { display: flex; flex-wrap: wrap; background: #f4f4f4; border-radius: 12px; padding: 4px; margin-bottom: 24px; gap: 4px; }
+        .role-btn { flex: 1 1 calc(50% - 4px); padding: 8px 10px; border: none; border-radius: 9px; font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; background: transparent; color: #888; transition: all 0.22s ease; display: flex; align-items: center; justify-content: center; gap: 4px; }
         .role-btn.active { background: #fff; color: #E8192C; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
 
         .auth-form { display: flex; flex-direction: column; gap: 18px; }
@@ -384,11 +382,17 @@ const Login = () => {
 
           {/* Role Toggle */}
           <div className="role-toggle">
-            <button type="button" className={`role-btn ${!isAdmin ? 'active' : ''}`} onClick={() => handleRoleChange('user')}>
-              <User size={16} /> Alıcı
+            <button type="button" className={`role-btn ${formData.role === 'user' ? 'active' : ''}`} onClick={() => handleRoleChange('user')}>
+              <User size={14} /> Alıcı
             </button>
-            <button type="button" className={`role-btn ${isAdmin ? 'active' : ''}`} onClick={() => handleRoleChange('admin')}>
-              <Store size={16} /> Satıcı
+            <button type="button" className={`role-btn ${formData.role === 'admin' ? 'active' : ''}`} onClick={() => handleRoleChange('admin')}>
+              <Store size={14} /> Satıcı
+            </button>
+            <button type="button" className={`role-btn ${formData.role === 'blogger' ? 'active' : ''}`} onClick={() => handleRoleChange('blogger')}>
+              <TrendingUp size={14} /> Bloqer
+            </button>
+            <button type="button" className={`role-btn ${formData.role === 'superadmin' ? 'active' : ''}`} onClick={() => handleRoleChange('superadmin')}>
+              <LayoutDashboard size={14} /> Admin
             </button>
           </div>
 

@@ -24,9 +24,11 @@ import {
 } from "../controller/superAdminController.js";
 
 import {
-  isAuthenticatedUser,
-  isSuperAdmin,
-} from "../middleware/authMiddleware.js";
+    isAuthenticatedUser,
+    authorizeRoles,
+    isApprovedSeller,
+    isSuperAdmin,
+} from "../middleware/auth.js";
 
 const router = express.Router();
 

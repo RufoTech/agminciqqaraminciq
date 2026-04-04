@@ -214,7 +214,7 @@ bloggerSchema.methods.comparePassword = async function (enteredPassword) {
 // jwtTokeniEldeEt — sendToken.js bu metodu çağırır (User/Admin ilə uyğun ad)
 bloggerSchema.methods.jwtTokeniEldeEt = function () {
     return jwt.sign(
-        { id: this._id, role: this.role },
+        { id: this._id, model: "Blogger" },
         process.env.JWT_SECRET_KEY,
         { expiresIn: process.env.JWT_EXPIRES_TIME || "7d" }
     );
