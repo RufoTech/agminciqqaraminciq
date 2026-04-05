@@ -488,10 +488,15 @@ export const awardReviewBonus = catchAsyncErrors(async (req, res, next) => {
 
 // =====================================================================
 // REFERRAL LİNK MƏLUMATI
-// GET /bonus/referral
-// =====================================================================
 export const getReferralInfo = catchAsyncErrors(async (req, res) => {
-    const referralCode = req.user.referralCode;
+    const userId = req.user._id;
+    let referralCode = req.user.referralCode;
+
+    if (!referralCode) {
+        referralCode = crypto.randomBytes(4).toString("hex").toUpperCase();
+        req.user.referralCode = referralCode;
+        await req.user.save({ validateBeforeSave: false });
+    }
 
     // Referral statistikası
     const totalReferred = await User.countDocuments({ referredBy: userId });
