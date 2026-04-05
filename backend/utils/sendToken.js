@@ -62,7 +62,7 @@ export default (user, statusCode, res, extraData = {}) => {
     // Bu iki sahənin olmaması login sonrası 401 xətasına səbəb olurdu:
     //   Brauzer cross-origin sorğularda cookie-ni göndərmirdi →
     //   isAuthenticatedUser token tapa bilmirdi → 401 qaytarırdı.
-    const isProduction = process.env.NODE_ENV === "PRODUCTION";
+    const isProduction = process.env.NODE_ENV === "PRODUCTION" || process.env.NODE_ENV === "production";
     // COOKIE_EXPIRES_TIME yoxlanılır (default: 7 gün)
     const expiresDays = Number(process.env.COOKIE_EXPIRES_TIME) || 7;
 

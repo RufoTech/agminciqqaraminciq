@@ -46,6 +46,19 @@ import { Product } from "../model/Product.js";
 // bildiriş göndərən yardımçı funksiya.
 import { notifyNewUser, notifyWelcome } from "../utils/notificationHelper.js";
 
+const resolveFrontendUrl = () => {
+    const rawValue =
+        process.env.FRONTEND_URL ||
+        process.env.CLIENT_URL ||
+        "http://localhost:5173";
+
+    return rawValue
+        .split(",")
+        .map((item) => item.trim())
+        .find(Boolean)
+        ?.replace(/\/$/, "") || "http://localhost:5173";
+};
+
 
 // =====================================================================
 // QEYDİYYAT (REGISTER)
@@ -145,7 +158,7 @@ export const registerUser = catchAsyncErrors(async (req, res, next) => {
 
         // Mağazanın ictimai linki — bu link müştərilərə paylaşıla bilər.
         // Məsələn: http://localhost:3010/store/gulun-magazasi-4823
-        const storeLink = `${process.env.FRONTEND_URL}/store/${storeSlug}`;
+        const storeLink = `${resolveFrontendUrl()}/store/${storeSlug}`;
 
         // ── ƏSAS DƏYİŞİKLİK ──────────────────────────────────────────
         // Əvvəl: res.status(201).json({...}) — manual cavab, cookie YOX idi.
@@ -437,7 +450,7 @@ export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
 
     // İstifadəçiyə göndəriləcək link — xam token URL-də olur
-    const frontendUrl = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') : "http://localhost:5173";
+    const frontendUrl = resolveFrontendUrl();
     const resetUrl = `${frontendUrl}/password/reset/${resetToken}`;
 
     // HTML email şablonu hazırlanır — istifadəçinin adı və link daxil edilir

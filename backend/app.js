@@ -77,6 +77,7 @@ dotenv.config({ path: "config/config.env" });
 // EXPRESS TƏTBİQİNİ YARAT
 // =====================================================================
 const app = express();
+app.disable("etag");
 
 
 // =====================================================================
@@ -182,6 +183,15 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 // req.cookies-i oxunaqlı edir.
 // Olmasa: isAuthenticatedUser-da req.cookies.token = undefined.
 app.use(cookieParser());
+
+// API cavablarında brauzer cache/304 davranışını söndürürük ki,
+// frontend JSON endpoint-ləri səhvən "error" kimi qəbul etməsin.
+app.use("/commerce/mehsullar", (req, res, next) => {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
+    next();
+});
 
 // ── STATİK FAYL XİDMƏTİ ─────────────────────────────────────────────
 // PDF çeklər (generateReceipt.js-dən yaradılan) bu qovluqda saxlanılır.

@@ -21,7 +21,7 @@ const router = express.Router();
 
 // ── PUBLİK ─────────────────────────────────────────────────────────
 // Bonus konfiqini hər kəs görmə bilər (UI-da göstərmək üçün)
-router.get("/config", getBonusConfig);
+router.get("/config", isAuthenticatedUser, getBonusConfig);
 
 // ── İSTİFADƏÇİ (giriş tələb olunur) ────────────────────────────────
 router.get("/my",             isAuthenticatedUser, getMyBonus);

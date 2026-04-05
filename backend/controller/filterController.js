@@ -173,7 +173,7 @@ export const getFilteredProducts = async (req, res) => {
         let sortOptions = {};
         if (sort) {
             if (sort === "rating") {
-                sortOptions.rating = -1;    // ən yüksək reytingli əvvəl
+                sortOptions.ratings = -1;   // ən yüksək reytingli əvvəl
             } else if (sort === "price-low") {
                 sortOptions.price  = 1;     // ən ucuz əvvəl
             } else if (sort === "price-high") {
