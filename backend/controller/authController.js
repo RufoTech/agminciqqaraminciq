@@ -437,7 +437,8 @@ export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
 
     // İstifadəçiyə göndəriləcək link — xam token URL-də olur
-    const resetUrl = `${process.env.FRONTEND_URL}/password/reset/${resetToken}`;
+    const frontendUrl = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') : "http://localhost:5173";
+    const resetUrl = `${frontendUrl}/password/reset/${resetToken}`;
 
     // HTML email şablonu hazırlanır — istifadəçinin adı və link daxil edilir
     const message = getResetPasswordTemplate(user.name, resetUrl);
@@ -521,18 +522,13 @@ export const resetPassword = catchAsyncErrors(async (req, res, next) => {
         return next(new ErrorHandler("Şifrələr uyğunlaşmır", 400));
     }
 
-    // Yeni şifrə təyin edilir — model middleware-i (pre save hook)
-    // onu avtomatik bcrypt ilə hash edəcək.
+    // Şifrəni sıfırla və token-ləri təmizlə
     user.password = req.body.password;
-
-    // Token sahələri silinir — artıq istifadəyə yararsızdır.
-    // Eyni link ikinci dəfə işləməməlidir.
-    user.resetPasswordToken  = undefined;
+    user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
 
-    await user.save();
+    // Validation-dan keçməsi üçün bəzi sahələrin (əgər varsa) doldurulmasını yoxla
+    await user.save({ validateBeforeSave: false });
 
-    // Şifrə yeniləndi — istifadəçi avtomatik daxil olsun deyə token verilir
-    // sendToken artıq sellerInfo-nu da cavaba əlavə edir
     sendToken(user, 200, res);
 });

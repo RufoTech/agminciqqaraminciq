@@ -1,216 +1,207 @@
-// catchAsyncErrors — async funksiyalardakı xətaları avtomatik tutur,
-// hər controller-ə try/catch yazmaqdan xilas edir.
-import catchAsyncErrors from "../middleware/catchAsyncErrors.js";
-
-// ErrorHandler — özəl xəta sinifi.
-// new ErrorHandler("mesaj", statusKod) şəklində istifadə olunur.
-import ErrorHandler from "../utils/errorHandler.js";
-
-// Notification — bildiriş modeli.
-// recipient (alan), type, message, isRead kimi sahələri saxlayır.
-import Notification from "../model/Notification.js";
+// Product — məhsul modeli. MongoDB-dəki "products" kolleksiyası ilə işləyir.
+// Bütün filter, axtarış və sıralama əməliyyatları bu model üzərindən aparılır.
+import { Product } from "../model/Product.js";
 
 
 // =====================================================================
-// ÖZ BİLDİRİŞLƏRİNİ GÖR — getMyNotifications
+// FİLTERLİ MƏHSUL AXTAR — getFilteredProducts
 // ---------------------------------------------------------------------
-// GET /notifications?page=1&limit=20&unreadOnly=true
+// GET /api/v1/products/filter?name=iphone&category=phones&priceMin=100
 //
-// İstifadəçi bildiriş zənginə (🔔) basanda işləyir.
-// Səhifələmə (pagination) dəstəklənir — bütün bildirişləri birdən
-// yükləmək əvəzinə hissə-hissə gətirilir (performans üçün vacibdir).
-// =====================================================================
-export const getMyNotifications = catchAsyncErrors(async (req, res, next) => {
-
-    // page   — neçənci səhifə (default: 1)
-    // limit  — hər səhifədə neçə bildiriş (default: 20)
-    // unreadOnly — yalnız oxunmamışları göstər ("true" / "false" string gəlir)
-    const { page = 1, limit = 20, unreadOnly } = req.query;
-
-    // ── FİLTER OBYEKTİ ──────────────────────────────────────────────
-    // recipient: req.user.id — yalnız bu istifadəçiyə aid bildirişlər gəlsin.
-    // Hər istifadəçi yalnız öz bildirişlərini görə bilər.
-    const filter = { recipient: req.user.id };
-
-    // unreadOnly=true göndərilibsə — yalnız isRead=false olanlar süzülür.
-    // Bildiriş panelindəki "Yalnız oxunmamışlar" seçimi üçün.
-    if (unreadOnly === "true") filter.isRead = false;
-
-    // ── ÜMUMI SAY ───────────────────────────────────────────────────
-    // countDocuments() — sorğuya uyğun sənədlərin sayını qaytarır.
-    // Bütün sənədləri çəkmədən yalnız sayı bilmək üçündür — performanslıdır.
-    // totalPages hesablamaq üçün lazımdır.
-    const total = await Notification.countDocuments(filter);
-
-    // ── SƏHİFƏLƏMƏ İLƏ BİLDİRİŞLƏR ─────────────────────────────────
-    // .sort({ createdAt: -1 }) — ən yeni bildiriş ən üstdə
-    //
-    // .skip((page - 1) * limit) — neçə sənədi atlayacağımızı hesablayır:
-    //   Səhifə 1: skip(0)  → 1-ci bildirişdən başla
-    //   Səhifə 2: skip(20) → 21-ci bildirişdən başla
-    //   Səhifə 3: skip(40) → 41-ci bildirişdən başla
-    //
-    // .limit(Number(limit)) — neçə sənəd gətirəcəyini məhdudlaşdırır.
-    //   Number() — req.query-dən string gəlir, rəqəmə çevirmək lazımdır.
-    const notifications = await Notification.find(filter)
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(Number(limit));
-
-    // ── OXUNMAMIŞ BİLDİRİŞ SAYI ────────────────────────────────────
-    // Navbar-dakı bildiriş nişanı (badge) üçün — məsələn: 🔔 5
-    // unreadOnly filterdən asılı olmayaraq həmişə tam sayı qaytarır.
-    const unreadCount = await Notification.countDocuments({
-        recipient: req.user.id,
-        isRead: false,
-    });
-
-    res.status(200).json({
-        success:     true,
-        notifications,
-        unreadCount,              // navbar badge üçün
-        total,                    // ümumi bildiriş sayı
-        totalPages: Math.ceil(total / limit), // neçə səhifə var
-        currentPage: Number(page),            // hazırda neçənci səhifədəyik
-    });
-});
-
-
-// =====================================================================
-// TƏK BİLDİRİŞİ OXUNMUŞ İŞARƏLƏ — markAsRead
-// ---------------------------------------------------------------------
-// PUT /notifications/:id/read
+// İstifadəçi filtr panelindən seçim etdikdə işləyir.
+// Bütün filterlər isteğe bağlıdır — göndərilməyənlər nəzərə alınmır.
+// Nəticə sort parametrinə görə sıralanır.
 //
-// İstifadəçi bir bildirişə tıklayanda işləyir.
+// Niyə catchAsyncErrors yoxdur?
+//   Bu funksiya daxili try/catch ilə xətaları özü idarə edir.
+//   catchAsyncErrors middleware-i olmasa da işləyir.
 // =====================================================================
-export const markAsRead = catchAsyncErrors(async (req, res, next) => {
+export const getFilteredProducts = async (req, res) => {
+    try {
 
-    // findOneAndUpdate — tapmaq və yeniləmək əməliyyatını bir sorğuda birləşdirir.
-    //
-    // Şərtlər:
-    //   _id: req.params.id     → URL-dən gələn bildiriş ID-si
-    //   recipient: req.user.id → yalnız öz bildirişini dəyişdirə bilər
-    //                            (başqasının bildirişini oxunmuş etməsin!)
-    //
-    // { isRead: true } — yalnız bu sahə yenilənir
-    //
-    // { new: true } — yenilənmiş sənədi qaytarır (köhnəni deyil).
-    //   false olarsa — dəyişiklikdən əvvəlki hal qaytarılardı.
-    const notification = await Notification.findOneAndUpdate(
-        { _id: req.params.id, recipient: req.user.id },
-        { isRead: true },
-        { new: true }
-    );
+        // ── BÜTÜN QUERY PARAMETRLƏRİNİ ÇƏK ─────────────────────────
+        // req.query — URL-dəki bütün parametrləri saxlayan obyektdir.
+        // Məsələn: /filter?category=phones&priceMin=200&color=black
+        //   → req.query = { category: "phones", priceMin: "200", color: "black" }
+        //
+        // Bütün dəyərlər STRING olaraq gəlir — Number() çevirməsi lazım olan yerlər var.
+        // ─────────────────────────────────────────────────────────────
+        const {
+            name,               // Məhsul adında axtarış (hissəvi, böyük/kiçik hərf fərqsiz)
+            seller,             // Satıcı adı (birdən çox ola bilər: "Apple,Samsung")
+            priceMin,           // Qiymət aralığının alt həddi
+            priceMax,           // Qiymət aralığının üst həddi
+            category,           // Kateqoriya: "phones", "laptops", "cameras" və s.
+            subcategory,        // Subkateqoriya
 
-    // Bildiriş tapılmadısa — ya ID yanlışdır, ya da başqasının bildirişidir
-    if (!notification) {
-        return next(new ErrorHandler("Bildiriş tapılmadı", 404));
+            // ── TELEFON / iPad XÜSUSİYYƏTLƏRİ ──────────────────────
+            color,              // Rəng: "black", "white", "gold"
+            screenSize,         // Ekran: "6.1 inch", "6.7 inch"
+            storage,            // Daxili yaddaş: "128GB", "256GB"
+            ram,                // Operativ yaddaş: "8GB", "16GB"
+            frontCamera,        // Ön kamera: "12MP", "32MP"
+            backCamera,         // Arxa kamera: "48MP", "108MP"
+            battery,            // Batareya: "4000mAh", "5000mAh"
+            processor,          // Prosessor: "A17 Pro", "Snapdragon 8 Gen 3"
+            operatingSystem,    // ƏS: "iOS", "Android"
+
+            // ── LAPTOP XÜSUSİYYƏTLƏRİ ───────────────────────────────
+            gpu,                // Qrafik kart: "RTX 4060", "M3 Pro"
+            camera,             // Laptop kamerası: "1080p", "720p"
+            batteryLife,        // Batareya ömrü: "10 hours", "18 hours"
+
+            // ── KAMERA XÜSUSİYYƏTLƏRİ ───────────────────────────────
+            resolution,         // Çözünürlük: "24MP", "50MP"
+            opticalZoom,        // Optik zoom: "3x", "10x"
+            sensorType,         // Sensor: "Full-frame", "APS-C"
+            imageStabilization, // Görüntü sabitləşdirmə: "Yes", "No"
+
+            // ── QULAQLIQ XÜSUSİYYƏTLƏRİ ─────────────────────────────
+            connectivity,       // Bağlantı: "Bluetooth 5.3", "Wired"
+            noiseCancellation,  // Aktiv səs-küy azaltma: "Yes", "No"
+
+            // ── OYUN KONSOLİ XÜSUSİYYƏTLƏRİ ─────────────────────────
+            cpu,                // Konsol prosessoru: "AMD Zen 2", "ARM Cortex"
+            memory,             // Konsol yaddaşı: "16GB GDDR6"
+            supportedResolution,// Dəstəklənən çözünürlük: "4K", "1080p"
+            controllerIncluded, // Kontroller daxildirmi?: "true" / "false" (string gəlir!)
+
+            // ── iPad XÜSUSİYYƏTİ ─────────────────────────────────────
+            cellular,           // Mobil şəbəkə dəstəyi: "true" / "false" (string gəlir!)
+
+            // ── SIRALAMA ─────────────────────────────────────────────
+            sort,               // "rating" | "price-low" | "price-high" | "newest"
+        } = req.query;
+
+
+        // ── DİNAMİK FİLTER OBYEKTİ ──────────────────────────────────
+        // Boş {} ilə başlayır — yalnız göndərilən parametrlər əlavə olunur.
+        // Bu sayəsində göndərilməyən filter bütün məhsulları gətirir.
+        // Məsələn: yalnız category gəlibsə → {category: "phones"}
+        //   MongoDB bütün telefon məhsullarını qaytarır.
+        let filterQuery = {};
+
+
+        // ── AD ÜZRƏ AXTARIŞ ─────────────────────────────────────────
+        if (name) {
+            // $regex — hissəvi axtarış: "pro" axtaranda "iPhone 15 Pro" tapılır.
+            // $options: "i" — "PRO", "Pro", "pro" hamısı eyni nəticəni verir.
+            // Alternativ: tam uyğunluq istəsəydik: filterQuery.name = name
+            filterQuery.name = { $regex: name, $options: "i" };
+        }
+
+        // ── SATICIYA GÖRƏ FİLTER ────────────────────────────────────
+        if (seller) {
+            // Frontend birdən çox satıcı göndərə bilər: "Apple,Samsung,Xiaomi"
+            // split(",") → ["Apple", "Samsung", "Xiaomi"]
+            // .map(trim) → boşluqları təmizlər: " Apple " → "Apple"
+            // $in → bu dəyərlərdən hər hansı birinə uyğun gələnləri gətirir
+            const sellersArray = seller.split(",").map((s) => s.trim());
+            filterQuery.seller = { $in: sellersArray };
+        }
+
+        // ── QİYMƏT ARALIĞI ──────────────────────────────────────────
+        if (priceMin || priceMax) {
+            // İkisi birlikdə: {price: {$gte: 100, $lte: 500}} → 100-500 AZN aralığı
+            // Yalnız biri: {price: {$gte: 100}} → 100 AZN-dən yuxarı hamısı
+            filterQuery.price = {};
+            // Number() — string "200"-ü rəqəm 200-ə çevirir (req.query hər şeyi string verir)
+            if (priceMin) filterQuery.price.$gte = Number(priceMin); // greater than or equal
+            if (priceMax) filterQuery.price.$lte = Number(priceMax); // less than or equal
+        }
+
+        // ── KATEQORİYA ──────────────────────────────────────────────
+        if (category) {
+            // Tam uyğunluq — "phones" yalnız "phones" ilə uyğun gəlir, "phone" ilə yox.
+            filterQuery.category = category;
+        }
+
+        if (subcategory) {
+            filterQuery.subcategory = subcategory;
+        }
+
+
+        // ── BÜTÜN DİGƏR XÜSUSİYYƏTLƏR ──────────────────────────────
+        // Bunların hərəsi yalnız göndərildikdə filter siyahısına əlavə olunur.
+        // Məsələn: color gəlibsə → {color: "black"} — tam uyğunluq axtarışı.
+        // Niyə $regex yox? Bunlar seçim siyahısından (dropdown) gəlir,
+        // hissəvi axtarış lazım deyil — istifadəçi dəqiq dəyər seçir.
+        if (color)              filterQuery.color              = color;
+        if (screenSize)         filterQuery.screenSize         = screenSize;
+        if (storage)            filterQuery.storage            = storage;
+        if (ram)                filterQuery.ram                = ram;
+        if (frontCamera)        filterQuery.frontCamera        = frontCamera;
+        if (backCamera)         filterQuery.backCamera         = backCamera;
+        if (battery)            filterQuery.battery            = battery;
+        if (processor)          filterQuery.processor          = processor;
+        if (operatingSystem)    filterQuery.operatingSystem    = operatingSystem;
+        if (gpu)                filterQuery.gpu                = gpu;
+        if (camera)             filterQuery.camera             = camera;
+        if (batteryLife)        filterQuery.batteryLife        = batteryLife;
+        if (resolution)         filterQuery.resolution         = resolution;
+        if (opticalZoom)        filterQuery.opticalZoom        = opticalZoom;
+        if (sensorType)         filterQuery.sensorType         = sensorType;
+        if (imageStabilization) filterQuery.imageStabilization = imageStabilization;
+        if (connectivity)       filterQuery.connectivity       = connectivity;
+        if (noiseCancellation)  filterQuery.noiseCancellation  = noiseCancellation;
+        if (cpu)                filterQuery.cpu                = cpu;
+        if (memory)             filterQuery.memory             = memory;
+        if (supportedResolution)filterQuery.supportedResolution= supportedResolution;
+
+        // ── BOOLEAN ÇEVRÍMƏ ──────────────────────────────────────────
+        // req.query-dən gələn bütün dəyərlər STRING-dir.
+        // MongoDB-də boolean sahə üçün string "true" yanlış nəticə verər:
+        //   "true" !== true → heç nə tapılmaz
+        //
+        // === "true" müqayisəsi:
+        //   "true"  === "true" → true  (boolean)
+        //   "false" === "true" → false (boolean)
+        //
+        // undefined yoxlaması: parametr heç göndərilməyibsə filter əlavə etmirik.
+        if (controllerIncluded !== undefined)
+            filterQuery.controllerIncluded = controllerIncluded === "true";
+        if (cellular !== undefined)
+            filterQuery.cellular = cellular === "true";
+
+
+        // ── SIRALAMA ─────────────────────────────────────────────────
+        // sortOptions boş qalarsa — MongoDB default sıralama istifadə edir (_id artaraq).
+        //
+        // MongoDB sort dəyərləri:
+        //   1  → artan sıra  (ascending)  — kiçikdən böyüyə
+        //  -1  → azalan sıra (descending) — böyükdən kiçiyə
+        let sortOptions = {};
+        if (sort) {
+            if (sort === "rating") {
+                sortOptions.rating = -1;    // ən yüksək reytingli əvvəl
+            } else if (sort === "price-low") {
+                sortOptions.price  = 1;     // ən ucuz əvvəl
+            } else if (sort === "price-high") {
+                sortOptions.price  = -1;    // ən baha əvvəl
+            } else if (sort === "newest") {
+                sortOptions.createdAt = -1; // ən yeni əvvəl
+            }
+        }
+
+
+        // ── SORĞUNU İCRA ET ──────────────────────────────────────────
+        // Product.find(filterQuery) — bütün şərtlərə uyğun məhsulları tapır.
+        // .sort(sortOptions) — tapılan nəticələri seçilmiş qaydada sıralayır.
+        //
+        // filterQuery = {} olarsa — bütün məhsullar gəlir (filter yoxdur).
+        // sortOptions = {} olarsa — default sıralama tətbiq olunur.
+        const products = await Product.find(filterQuery).sort(sortOptions);
+
+        // 200 OK — uğurlu cavab
+        // products — tapılan məhsulların massivi (boş ola bilər, xəta deyil)
+        return res.status(200).json({ success: true, products });
+
+    } catch (error) {
+        // ── XƏTA İDARƏSİ ─────────────────────────────────────────────
+        // console.error — xəta haqqında serverdə log yaradır (debug üçün).
+        // 500 Internal Server Error — server tərəfli problem olduqda.
+        // error.message — xətanın qısa izahı frontend-ə göndərilir.
+        console.error("Məhsulları filterləmə zamanı xəta:", error);
+        return res.status(500).json({ success: false, message: error.message });
     }
-
-    // Yenilənmiş bildiriş qaytarılır — frontend UI-ı anında yeniləsin deyə
-    res.status(200).json({ success: true, notification });
-});
-
-
-// =====================================================================
-// BÜTÜN BİLDİRİŞLƏRİ OXUNMUŞ İŞARƏLƏ — markAllAsRead
-// ---------------------------------------------------------------------
-// PUT /notifications/read-all
-//
-// "Hamısını oxunmuş et" düyməsi üçün.
-// =====================================================================
-export const markAllAsRead = catchAsyncErrors(async (req, res, next) => {
-
-    // updateMany — şərtə uyan bütün sənədləri bir əməliyyatla yeniləyir.
-    //
-    // Şərtlər:
-    //   recipient: req.user.id → yalnız bu istifadəçinin bildirişləri
-    //   isRead: false          → yalnız hələ oxunmamışlar (artıq oxunmuşlara toxunmur)
-    //
-    // Niyə isRead: false şərti var?
-    //   Artıq oxunmuş olanları yenidən yazmaq lazımsız verilənlər bazası yüküdür.
-    //   Bu şərt sayəsində yalnız lazımlı sənədlər yenilənir.
-    await Notification.updateMany(
-        { recipient: req.user.id, isRead: false },
-        { isRead: true }
-    );
-
-    res.status(200).json({
-        success: true,
-        message: "Bütün bildirişlər oxunmuş işarələndi",
-    });
-});
-
-
-// =====================================================================
-// TƏK BİLDİRİŞİ SİL — deleteNotification
-// ---------------------------------------------------------------------
-// DELETE /notifications/:id
-//
-// İstifadəçi bildirişin yanındakı "×" düyməsinə basanda işləyir.
-// =====================================================================
-export const deleteNotification = catchAsyncErrors(async (req, res, next) => {
-
-    // findOneAndDelete — tapmaq və silmək əməliyyatını bir sorğuda birləşdirir.
-    //
-    // Niyə yalnız _id ilə deyil, recipient şərti də var?
-    //   Təhlükəsizlik üçün: istifadəçi başqasının bildirişinin ID-sini
-    //   bilsə belə, onu silə bilməsin.
-    //   recipient şərti olmasa — hər kəs hər kəsin bildirişini silə bilərdi.
-    const notification = await Notification.findOneAndDelete({
-        _id: req.params.id,
-        recipient: req.user.id,
-    });
-
-    if (!notification) {
-        return next(new ErrorHandler("Bildiriş tapılmadı", 404));
-    }
-
-    res.status(200).json({ success: true, message: "Bildiriş silindi" });
-});
-
-
-// =====================================================================
-// BÜTÜN BİLDİRİŞLƏRİ SİL — deleteAllNotifications
-// ---------------------------------------------------------------------
-// DELETE /notifications
-//
-// "Hamısını təmizlə" düyməsi üçün.
-// =====================================================================
-export const deleteAllNotifications = catchAsyncErrors(async (req, res, next) => {
-
-    // deleteMany — şərtə uyan bütün sənədləri bir əməliyyatla silir.
-    // Yalnız bu istifadəçinin bildirişləri silinir — digərlərinə toxunulmur.
-    await Notification.deleteMany({ recipient: req.user.id });
-
-    res.status(200).json({
-        success: true,
-        message: "Bütün bildirişlər silindi",
-    });
-});
-
-
-// =====================================================================
-// OXUNMAMIŞ BİLDİRİŞ SAYI — getUnreadCount
-// ---------------------------------------------------------------------
-// GET /notifications/unread-count
-//
-// Navbar-dakı bildiriş nişanı (badge) üçün — məsələn: 🔔 3
-//
-// Niyə ayrıca endpoint var, getMyNotifications yetərli deyilmi?
-//   getMyNotifications bütün bildirişləri + sayı qaytarır — ağır sorğudur.
-//   Bu endpoint yalnız bir rəqəm qaytarır — çox sürətlidir.
-//   Səhifə yüklənəndə yalnız sayı bilmək üçün bu endpoint çağırılır,
-//   istifadəçi zəngə bassanda isə getMyNotifications çağırılır.
-// =====================================================================
-export const getUnreadCount = catchAsyncErrors(async (req, res, next) => {
-
-    // countDocuments() — sənədlər çəkilmədən yalnız sayı qaytarır.
-    // Bütün bildirişləri yükləyib .length almaqdan çox daha performanslıdır.
-    const count = await Notification.countDocuments({
-        recipient: req.user.id,
-        isRead: false,
-    });
-
-    res.status(200).json({ success: true, unreadCount: count });
-});
+};
