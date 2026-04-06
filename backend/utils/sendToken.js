@@ -99,6 +99,11 @@ export default (user, statusCode, res, extraData = {}) => {
         name:         user.name || `${user.firstName || ""} ${user.lastName || ""}`.trim(),
         email:        user.email,
         role:         user.role,
+        // Blogger üçün əlavə sahələr
+        firstName:    user.firstName || null,
+        lastName:     user.lastName  || null,
+        promoCode:    user.promoCode || null,
+        promoLink:    user.promoLink || null,
         // sellerStatus — mövcud deyilsə (User modelində "none" default) null göndər
         sellerStatus: user.sellerStatus || null,
         // sellerInfo — mövcud deyilsə (User modelində yoxdur) null göndər

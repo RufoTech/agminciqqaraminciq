@@ -69,7 +69,7 @@ const bloggerSchema = new mongoose.Schema(
         password: {
             type:      String,
             required:  [true, "Şifrə mütləqdir"],
-            minlength: [6, "Şifrə ən az 6 simvol olmalıdır"],
+            minlength: [8, "Şifrə ən az 8 simvol olmalıdır"],
             select:    false,       // sorğularda avtomatik gəlməsin
         },
 
@@ -206,7 +206,7 @@ bloggerSchema.virtual("name").get(function () {
 // =====================================================================
 
 // ── Şifrəni müqayisə et ──────────────────────────────────────────────
-bloggerSchema.methods.comparePassword = async function (enteredPassword) {
+bloggerSchema.methods.shifreleriMuqayiseEt = async function (enteredPassword) {
     return bcrypt.compare(enteredPassword, this.password);
 };
 

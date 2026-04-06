@@ -77,6 +77,7 @@ dotenv.config({ path: "config/config.env" });
 // EXPRESS TƏTBİQİNİ YARAT
 // =====================================================================
 const app = express();
+app.set("trust proxy", 1);
 app.disable("etag");
 
 

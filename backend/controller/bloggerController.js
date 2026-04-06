@@ -419,8 +419,8 @@ export const getBloggersOverview = catchAsyncErrors(async (req, res, next) => {
 export const registerBlogger = catchAsyncErrors(async (req, res, next) => {
     const { firstName, lastName, fatherName, email, phone, password } = req.body;
 
-    if (!firstName || !email || !password) {
-        return next(new ErrorHandler("Ad, e-poçt və şifrə mütləqdir.", 400));
+    if (!firstName || !lastName || !email || !password) {
+        return next(new ErrorHandler("Ad, soyad, e-poçt və şifrə mütləqdir.", 400));
     }
 
     const existing = await Blogger.findOne({ email });
@@ -430,7 +430,7 @@ export const registerBlogger = catchAsyncErrors(async (req, res, next) => {
 
     const blogger = await Blogger.create({
         firstName,
-        lastName:           lastName  || "",
+        lastName,
         fatherName:         fatherName || "",
         email,
         phone:              phone     || "",
@@ -465,7 +465,7 @@ export const bloggerLogin = catchAsyncErrors(async (req, res, next) => {
         return next(new ErrorHandler("Hesabınız deaktiv edilib. Admin ilə əlaqə saxlayın.", 403));
     }
 
-    const isMatch = await blogger.comparePassword(password);
+    const isMatch = await blogger.shifreleriMuqayiseEt(password);
     if (!isMatch) {
         return next(new ErrorHandler("E-poçt və ya şifrə yanlışdır.", 401));
     }

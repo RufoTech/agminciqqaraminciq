@@ -39,7 +39,7 @@ const notificationSchema = new mongoose.Schema(
         // Bu sahə refPath üçün məcburidir — olmasa populate() işləməz.
         recipientModel: {
             type:     String,
-            enum:     ["User", "Admin"],
+            enum:     ["User", "Admin", "Blogger", "SuperAdmin"],
             required: true,
         },
 
