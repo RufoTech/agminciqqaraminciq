@@ -15,6 +15,7 @@ import ErrorHandler     from "../utils/errorHandler.js";
 import Blogger, { generatePromoCode } from "../model/Blogger.js";
 import BloggerSale      from "../model/BloggerSale.js";
 import sendToken        from "../utils/sendToken.js";
+import { isBloggerAllowed } from "../config/allowedBloggers.js";
 
 
 // ─────────────────────────────────────────────────────────────────────
@@ -428,6 +429,12 @@ export const registerBlogger = catchAsyncErrors(async (req, res, next) => {
         return next(new ErrorHandler("Bu e-poçt artıq qeydiyyatdadır.", 400));
     }
 
+    // Doğrulama siyahısından yoxla
+    const fullName = `${firstName} ${lastName}`.trim();
+    if (!isBloggerAllowed(fullName, phone)) {
+        return next(new ErrorHandler("Siz rəsmi bloqer siyahısında deyilsiniz və ya məlumatlar (ad/nömrə) yanlışdır.", 403));
+    }
+
     const blogger = await Blogger.create({
         firstName,
         lastName,
@@ -468,6 +475,12 @@ export const bloggerLogin = catchAsyncErrors(async (req, res, next) => {
     const isMatch = await blogger.shifreleriMuqayiseEt(password);
     if (!isMatch) {
         return next(new ErrorHandler("E-poçt və ya şifrə yanlışdır.", 401));
+    }
+
+    // Login zamanı da siyahıdan yoxla (əvvəl qeydiyyatdan keçənlər üçün məhdudiyyət)
+    const fullName = `${blogger.firstName} ${blogger.lastName}`.trim();
+    if (!isBloggerAllowed(fullName, blogger.phone)) {
+        return next(new ErrorHandler("Hesabınız rəsmi siyahıya uyğun gəlmir. Giriş qadağandır.", 403));
     }
 
     sendToken(blogger, 200, res);
@@ -680,6 +693,8 @@ export const recordBloggerSale = async ({
     customerId,
     customerEmail = "",
     orderAmount,
+    products = [],
+    method = "code",
 }) => {
     if (!promoCode || !orderAmount) return null;
 
@@ -714,6 +729,13 @@ export const recordBloggerSale = async ({
         orderAmount,
         commissionRate:  blogger.commissionRate,
         commissionAmount,
+        products:        products.map(p => ({
+            productId: p.product,
+            name:      p.name,
+            quantity:  p.quantity,
+            price:     p.price,
+        })),
+        method,
     });
 
     // Blogger statistikasını artır

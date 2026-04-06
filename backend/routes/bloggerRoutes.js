@@ -29,11 +29,21 @@ import {
     trackPromoLink,
 } from "../controller/bloggerController.js";
 
+import {
+    getBloggerProducts,
+    newBloggerProduct,
+    updateBloggerProduct,
+    deleteBloggerProduct,
+} from "../controller/bloggerProductController.js";
+
 import { 
     isAuthenticatedUser, 
     authorizeRoles, 
     isBlogger 
 } from "../middleware/auth.js";
+
+// uploadImages — multer middleware-i
+import { uploadImages } from "../middleware/multer.js";
 
 const router = express.Router();
 
@@ -76,6 +86,15 @@ router.route("/blogger/profile")
 
 router.route("/blogger/sales")
     .get(isAuthenticatedUser, isBlogger, getBloggerSales);
+
+// ── BLOGER PRODUCT ROUTES ─────────────────────────────────────────────
+router.route("/blogger/products")
+    .get(isAuthenticatedUser, isBlogger, getBloggerProducts)
+    .post(isAuthenticatedUser, isBlogger, uploadImages, newBloggerProduct);
+
+router.route("/blogger/products/:id")
+    .put(isAuthenticatedUser, isBlogger, uploadImages, updateBloggerProduct)
+    .delete(isAuthenticatedUser, isBlogger, deleteBloggerProduct);
 
 // ── PUBLIC ROUTES ─────────────────────────────────────────────────────
 router.route("/promo/validate/:code").get(validatePromoCode);

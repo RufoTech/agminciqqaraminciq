@@ -40,6 +40,9 @@ import {
     notifyLowStock,
 } from "../utils/notificationHelper.js";
 
+// Blogger satışı qeyd etmək üçün
+import { recordBloggerSale } from "./bloggerController.js";
+
 
 // Stripe obyekti bir dəfə yaradılır — bütün funksiyalar bunu istifadə edir.
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -57,39 +60,20 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 // =====================================================================
 export const createOrder = catchAsyncErrors(async (req, res, next) => {
 
-    const { stripePaymentIntentId, currency, bonusUsed = 0 } = req.body;
+    const { stripePaymentIntentId, currency, bonusUsed = 0, promoCode, promoMethod } = req.body;
     const userId = req.user.id;
+    const userEmail = req.user.email;
 
-    // PaymentIntent ID olmadan sifariş yaratmaq olmaz —
-    // ödənişin hansı əməliyyata aid olduğunu bilmirik.
     if (!stripePaymentIntentId) {
         return next(new ErrorHandler("Stripe ödəniş ID-si tələb olunur", 400));
     }
 
-    // ── STRIPE YOXLAMASI ─────────────────────────────────────────────
-    // retrieve() — Stripe-dan PaymentIntent-in cari vəziyyətini çəkir.
-    // Frontend-dən gələn statusu güvənmirik — həmişə Stripe-dan yoxlayırıq.
-    // Bu, saxtakarlığın qarşısını alır: istifadəçi ödəmədən sifariş verə bilməz.
     const paymentIntent = await stripe.paymentIntents.retrieve(stripePaymentIntentId);
-
-    // Qəbul edilən statuslar:
-    //   "succeeded"              → ödəniş tam tamamlandı (real mühit)
-    //   "requires_payment_method"→ test modda kart əlavə edilməyib
-    //   "requires_confirmation"  → test modda təsdiq gözlənilir
-    //   "requires_action"        → 3D Secure kimi əlavə addım lazımdır
-    //
-    // Niyə test statusları da qəbul edilir?
-    //   İnkişaf mərhələsində real ödəniş olmadan sifariş axınını sınaqdan
-    //   keçirmək üçün. Canlı mühitdə yalnız "succeeded" qalmalıdır.
     const allowedStatuses = ["succeeded", "requires_payment_method", "requires_confirmation", "requires_action"];
     if (!allowedStatuses.includes(paymentIntent.status)) {
         return next(new ErrorHandler(`Ödəniş təsdiqlənməyib. Status: ${paymentIntent.status}`, 400));
     }
 
-    // ── DUPLİKAT SİFARİŞ YOXLAMASI ───────────────────────────────────
-    // Eyni PaymentIntent ilə ikinci dəfə sifariş yaratmağın qarşısını alır.
-    // Məsələn: istifadəçi "Sifariş ver" düyməsinə iki dəfə bassaydı —
-    // ikinci sorğu eyni sifarişi qaytarır, yeni yaratmır.
     const existingOrder = await Order.findOne({
         "paymentInfo.stripePaymentId": stripePaymentIntentId,
     });
@@ -97,10 +81,6 @@ export const createOrder = catchAsyncErrors(async (req, res, next) => {
         return res.status(200).json({ success: true, order: existingOrder });
     }
 
-    // ── SƏBƏTİ ÇƏK ──────────────────────────────────────────────────
-    // populate() — products.product ID-lərini tam məhsul məlumatına çevirir.
-    // select: "name price images seller stock" — yalnız lazımlı sahələr.
-    // stock əlavə edilib — sifariş sonrası stoku azaltmaq üçün lazımdır.
     const cart = await Cart.findOne({ user: userId }).populate({
         path: "products.product",
         select: "name price images seller stock",
@@ -110,16 +90,6 @@ export const createOrder = catchAsyncErrors(async (req, res, next) => {
         return next(new ErrorHandler("Səbət boşdur", 400));
     }
 
-    // Debug logu — inkişaf mərhələsində satıcı məlumatlarını yoxlamaq üçün
-    console.log("🛒 Səbət məhsulları:");
-    cart.products.forEach((item, i) => {
-        console.log(`  [${i}] ad: ${item.product?.name} | seller: ${item.product?.seller} | qiymət: ${item.product?.price}`);
-    });
-
-    // ── SİFARİŞ ELEMENTLƏRİNİ HAZIRLA ──────────────────────────────
-    // Səbətdəki hər məhsuldan sifariş elementi yaradılır.
-    // images?.[0]?.url — şəkil massivi boş ola bilər, xəta verməsin deyə optional chaining.
-    // seller: null ola bilər — hər məhsulun satıcısı olmaya bilər (admin məhsulları).
     const orderItems = cart.products.map((item) => ({
         product:  item.product._id,
         name:     item.product.name,
@@ -129,33 +99,21 @@ export const createOrder = catchAsyncErrors(async (req, res, next) => {
         seller:   item.product.seller || null,
     }));
 
-    // ── ÜMUMI MƏBLƏĞİ HESABLA ──────────────────────────────────────
-    // reduce() — bütün elementlərin price × quantity-sini toplayır.
-    // Məsələn: [{price:100, qty:2}, {price:50, qty:1}] → 250
     const totalAmount = orderItems.reduce(
         (sum, item) => sum + item.price * item.quantity, 0
     );
 
-    // ── BONUS VALİDASİYASI ──────────────────────────────────────────
-    // bonusUsed göndərilmişsə — limit yoxlanılır (max 30%)
     let validatedBonusUsed = 0;
     if (bonusUsed > 0) {
         const bConfig = await BonusConfig.getConfig();
         const maxBonus = Math.floor((totalAmount * bConfig.maxRedemptionPercent) / 100 / bConfig.bonusValueAzn);
         validatedBonusUsed = Math.min(bonusUsed, maxBonus);
-        
-        // req.user has bonusBalance only if it's a regular User.
-        // Admin, Blogger or SuperAdmin don't have bonuses.
         const currentBalance = req.user.bonusBalance || 0;
         if (currentBalance < validatedBonusUsed) {
             validatedBonusUsed = currentBalance;
         }
     }
 
-    // ── SİFARİŞ YARAT ────────────────────────────────────────────────
-    // paymentInfo.status:
-    //   "paid"  → ödəniş uğurlu (real mühit)
-    //   "test"  → test modu (ödəniş tamamlanmayıb, amma sifariş yaradılır)
     const order = await Order.create({
         user: userId,
         orderItems,
@@ -166,8 +124,27 @@ export const createOrder = catchAsyncErrors(async (req, res, next) => {
         },
         totalAmount,
         bonusUsed: validatedBonusUsed,
+        promoCode,
+        promoMethod,
         orderStatus: "pending",
     });
+
+    // ── BLOGGER SATIŞI QEYD ET ─────────────────────────────────────
+    if (promoCode) {
+        try {
+            await recordBloggerSale({
+                promoCode,
+                orderId:      order._id,
+                customerId:    userId,
+                customerEmail: userEmail,
+                orderAmount:   totalAmount,
+                products:      orderItems,
+                method:        promoMethod || "code",
+            });
+        } catch (bloggerErr) {
+            console.error("Blogger satışı qeyd olunan zaman xəta:", bloggerErr);
+        }
+    }
 
     // ── BONUS FIFO İSTİFADƏ ──────────────────────────────────────────
     // Sifariş yaradıldı — bonusları ledger-dən düş

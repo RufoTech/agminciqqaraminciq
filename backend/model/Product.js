@@ -30,6 +30,7 @@ const productSchema = new mongoose.Schema(
         category:    { type: String, required: true },
         subcategory: { type: String },
         images:      [{ public_id: String, url: String }],
+        blogger:     { type: mongoose.Schema.Types.ObjectId, ref: "Blogger" },
 
         // ── TELEFON / iPad XÜSUSİYYƏTLƏRİ ──────────────────────────
         color:           { type: String },

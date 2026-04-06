@@ -43,12 +43,29 @@ const bloggerSaleSchema = new mongoose.Schema(
             uppercase: true,
         },
 
-        // Sifarişin ümumi məbləği (AZN)
+        // Satışın ümumi məbləği (AZN)
         orderAmount: {
             type:     Number,
             required: true,
             min:      0,
         },
+
+        // Satış hansı yolla edilib (Promo Kod və ya Link)
+        method: {
+            type:    String,
+            enum:    ["code", "link"],
+            default: "code",
+        },
+
+        // Satılan məhsulların snapshotu (isteğe bağlı, daha ətraflı hesabat üçün)
+        products: [
+            {
+                productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+                name:      String,
+                quantity:  Number,
+                price:     Number,
+            }
+        ],
 
         // Satış anındakı komissiya faizi (snapshot)
         commissionRate: {

@@ -173,6 +173,18 @@ const orderSchema = new mongoose.Schema(
             default: 0,
             min:     0,
         },
+        // ── BLOGGER PROMO ────────────────────────────────────────────
+        // promoCode — bu sifarişdə istifadə edilən blogger promo kodu.
+        // promoMethod — kodun daxil edilmə üsulu: "code" (əl ilə) və ya "link" (referal).
+        promoCode: {
+            type:    String,
+            default: null,
+        },
+        promoMethod: {
+          type:    String,
+          enum:    ["code", "link", null],
+          default: null,
+        },
     },
     {
         // timestamps: true — Mongoose avtomatik əlavə edir:
