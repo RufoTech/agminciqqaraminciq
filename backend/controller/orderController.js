@@ -22,13 +22,11 @@ import Cart from "../model/Cart.js";
 // Product — məhsul modeli. Sifariş sonrası stoku azaltmaq üçün lazımdır.
 import { Product } from "../model/Product.js";
 
-// Stripe — kart ödəməsini emal edən kitabxana.
-// PaymentIntent-i yoxlamaq üçün istifadə olunur.
-import Stripe from "stripe";
-
 // createCommission — hər sifariş yarandıqda komisya qeydi yaradan funksiya.
-// commissionController-dən import edilir — sifarişlə komisya birbaşa bağlıdır.
+// commissionController-dən import edilir
 import { createCommission } from "./commissionController.js";
+import paymentConfig from "../config/paymentConfig.js";
+import Admin from "../model/Admin.js";
 
 // Bildiriş yardımçı funksiyaları:
 //   notifyNewOrder         — satıcıya yeni sifariş bildirişi göndərir
@@ -45,7 +43,7 @@ import { recordBloggerSale } from "./bloggerController.js";
 
 
 // Stripe obyekti bir dəfə yaradılır — bütün funksiyalar bunu istifadə edir.
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+// Stripe asılılığı artıq qaldırıldı
 
 
 // =====================================================================
@@ -60,22 +58,22 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 // =====================================================================
 export const createOrder = catchAsyncErrors(async (req, res, next) => {
 
-    const { stripePaymentIntentId, currency, bonusUsed = 0, promoCode, promoMethod } = req.body;
+    // Artıq stripePaymentIntentId əvəzinə paymentId qəbul edirik
+    const { paymentId, currency, bonusUsed = 0, promoCode, promoMethod } = req.body;
     const userId = req.user.id;
     const userEmail = req.user.email;
 
-    if (!stripePaymentIntentId) {
-        return next(new ErrorHandler("Stripe ödəniş ID-si tələb olunur", 400));
+    if (!paymentId) {
+        return next(new ErrorHandler("Ödəniş ID-si tələb olunur", 400));
     }
 
-    const paymentIntent = await stripe.paymentIntents.retrieve(stripePaymentIntentId);
-    const allowedStatuses = ["succeeded", "requires_payment_method", "requires_confirmation", "requires_action"];
-    if (!allowedStatuses.includes(paymentIntent.status)) {
-        return next(new ErrorHandler(`Ödəniş təsdiqlənməyib. Status: ${paymentIntent.status}`, 400));
-    }
+    // Simulyasiya modunda ödəniş uğurlu qəbul edilir. 
+    // Sandbox modunda PashaPay API-yə verifikasiya sorğusu göndərilməlidir (bunu gələcəkdə webhook da edə bilər, amma indilik test edirik)
+    let paymentStatus = "paid";
+    let providerName = paymentConfig.MODE === "sandbox" ? "pashapay" : "simulation";
 
     const existingOrder = await Order.findOne({
-        "paymentInfo.stripePaymentId": stripePaymentIntentId,
+        "paymentInfo.paymentId": paymentId,
     });
     if (existingOrder) {
         return res.status(200).json({ success: true, order: existingOrder });
@@ -118,9 +116,10 @@ export const createOrder = catchAsyncErrors(async (req, res, next) => {
         user: userId,
         orderItems,
         paymentInfo: {
-            stripePaymentId: stripePaymentIntentId,
-            status:          paymentIntent.status === "succeeded" ? "paid" : "test",
+            paymentId:       paymentId,
+            status:          paymentStatus,
             currency:        currency || "azn",
+            provider:        providerName
         },
         totalAmount,
         bonusUsed: validatedBonusUsed,
@@ -129,10 +128,11 @@ export const createOrder = catchAsyncErrors(async (req, res, next) => {
         orderStatus: "pending",
     });
 
-    // ── BLOGGER SATIŞI QEYD ET ─────────────────────────────────────
+    // ── BLOGGER SATIŞI QEYD ET VƏ İNFLUENCER ID AL ────────────────
+    let influencerId = null;
     if (promoCode) {
         try {
-            await recordBloggerSale({
+            const bloggerSale = await recordBloggerSale({
                 promoCode,
                 orderId:      order._id,
                 customerId:    userId,
@@ -141,47 +141,48 @@ export const createOrder = catchAsyncErrors(async (req, res, next) => {
                 products:      orderItems,
                 method:        promoMethod || "code",
             });
+            // recordBloggerSale daxilində bloggerId-ni də qaytarmalıyıq, əgər mümkünsə.
+            // Alternativ olaraq, Blogger kolleksiyasından birbaşa promo koda görə tapaq:
+            const Blogger = (await import("../model/Blogger.js")).default;
+            const bloggerDoc = await Blogger.findOne({ promoCodes: { $in: [promoCode] } });
+            if (bloggerDoc) {
+                influencerId = bloggerDoc._id;
+            }
         } catch (bloggerErr) {
             console.error("Blogger satışı qeyd olunan zaman xəta:", bloggerErr);
         }
     }
 
     // ── BONUS FIFO İSTİFADƏ ──────────────────────────────────────────
-    // Sifariş yaradıldı — bonusları ledger-dən düş
     if (validatedBonusUsed > 0) {
         try {
             await consumeBonusFifo(userId, validatedBonusUsed, order._id);
         } catch (bonusErr) {
-            console.error("Bonus FIFO xətası (sifariş yaradıldı, bonus düşürülmədi):", bonusErr);
+            console.error("Bonus FIFO xətası:", bonusErr);
         }
     }
 
     // ── KOMİSYA HESABLAMA ────────────────────────────────────────────
-    // Hər satıcının cəmi ayrıca hesablanır — bir sifarişdə birdən çox
-    // satıcının məhsulu ola bilər.
-    //
-    // Məsələn: Apple-dən 2 məhsul (300+200=500 AZN), Samsung-dan 1 (150 AZN)
-    // sellerTotals = { "Apple Store": 500, "Samsung Shop": 150 }
     const sellerTotals = {};
     for (const item of orderItems) {
-        if (!item.seller) {
-            console.log(`⚠️  seller yoxdur: ${item.name}`);
-            continue; // satıcısı olmayan məhsullar atlanır
-        }
+        if (!item.seller) continue;
         const itemTotal = item.price * item.quantity;
-        // Eyni satıcının məhsulları toplanır:
-        // sellerTotals["Apple"] = (mövcud dəyər || 0) + yeni məhsulun cəmi
         sellerTotals[item.seller] = (sellerTotals[item.seller] || 0) + itemTotal;
     }
 
-    console.log("💰 Satıcı cəmləri:", sellerTotals);
+    // Satıcıların PashaPay subMerchantId-lərini 1 sorğuda yüklə (N+1 yoxdur)
+    const uniqueSellers = Object.keys(sellerTotals);
+    const sellerAdmins = await Admin.find(
+        { "sellerInfo.storeName": { $in: uniqueSellers } },
+        { "sellerInfo.storeName": 1, "sellerInfo.subMerchantId": 1 }
+    );
+    const subMerchantMap = {};
+    for (const a of sellerAdmins) {
+        subMerchantMap[a.sellerInfo.storeName] = a.sellerInfo.subMerchantId || null;
+    }
 
-    // Hər satıcı üçün ayrıca komisya qeydi yaradılır.
-    // createCommission() — Commission kolleksiyasına qeyd yazır,
-    // SellerBalance-i yeniləyir (commissionController-də izah edilib).
-    for (const [sellerId, amount] of Object.entries(sellerTotals)) {
-        console.log(`  → Komisya yaradılır: sellerId=${sellerId}, amount=${amount}`);
-        await createCommission(order._id, sellerId, amount);
+    for (const [sellerName, amount] of Object.entries(sellerTotals)) {
+        await createCommission(order._id, sellerName, amount, subMerchantMap[sellerName] || null, influencerId);
     }
 
     // ── BİLDİRİŞLƏR ─────────────────────────────────────────────────

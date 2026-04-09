@@ -94,6 +94,13 @@ const adminSchema = new mongoose.Schema(
                 type:     String,
                 required: [true, "VÖN nömrəsi daxil edin"],
             },
+            subMerchantId: {
+                type:    String,
+                default: null,
+                // PashaPay sub-merchant onboarding zamanı verilən ID.
+                // Split payment-də satıcı payının doğru hesaba getməsi üçün tələb olunur.
+                // Simulation modunda fake dəyər saxlanılır; sandbox/production-da real ID lazımdır.
+            },
         },
 
         // ── SATICI STATUSU ───────────────────────────────────────────
@@ -117,6 +124,11 @@ const adminSchema = new mongoose.Schema(
         isBlocked:    { type: Boolean, default: false },
         blockReason:  { type: String,  default: "" },
         productLimit: { type: Number,  default: 0 },
+
+        // ── SATICI REYTİNQİ ──────────────────────────────────────────
+        // Alıcıların mağazaya verdiyi ulduz ortalamas
+        avgRating:  { type: Number, default: 0, min: 0, max: 5 },
+        numReviews: { type: Number, default: 0, min: 0 },
 
         // ── ŞİFRƏ SIFIRLAМА SAHƏLƏRİ ────────────────────────────────
         // Bu sahələr yalnız "şifrəmi unutdum" axınında doldurulur.

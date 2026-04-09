@@ -2,15 +2,11 @@
 // hər controller-ə try/catch yazmaqdan xilas edir.
 import catchAsyncErrors from "../middleware/catchAsyncErrors.js";
 
-// SuperAdmin — sistemin ən yüksək səlahiyyətli istifadəçi modeli.
-// Admin yaratmaq, silmək, statusunu dəyişmək kimi əməliyyatlar yalnız
-// superadminə aiddir.
-import SuperAdmin from "../model/SuperAdmin.js";
-
-// Admin — satıcı/mağaza sahibi modeli.
-// SuperAdmin bu modeli tam idarə edir.
-import Admin from "../model/Admin.js";
-import User  from "../model/User.js";
+import SuperAdmin    from "../model/SuperAdmin.js";
+import Admin         from "../model/Admin.js";
+import User          from "../model/User.js";
+import SellerReview  from "../model/SellerReview.js";
+import Order         from "../model/Order.js";
 
 // ErrorHandler — özəl xəta sinifi.
 // new ErrorHandler("mesaj", statusKod) şəklində istifadə olunur.
@@ -676,4 +672,48 @@ export const toggleBloggerStatus = catchAsyncErrors(async (req, res, next) => {
         isActive: blogger.isActive,
         blogger,
     });
+});
+
+
+// =====================================================================
+// SATICI RƏYLƏRİ — getAdminReviews
+// GET /superadmin/admins/:id/reviews
+// =====================================================================
+export const getAdminReviews = catchAsyncErrors(async (req, res, next) => {
+    const seller = await Admin.findById(req.params.id).select("avgRating numReviews sellerInfo.storeName");
+    if (!seller) return next(new ErrorHandler("Mağaza tapılmadı", 404));
+
+    const reviews = await SellerReview.find({ seller: req.params.id })
+        .sort({ createdAt: -1 })
+        .select("userName rating comment createdAt");
+
+    res.status(200).json({
+        success:    true,
+        reviews,
+        avgRating:  seller.avgRating,
+        numReviews: seller.numReviews,
+        storeName:  seller.sellerInfo?.storeName,
+    });
+});
+
+
+// =====================================================================
+// BÜTÜN SİFARİŞLƏR — getAllOrdersForSA
+// GET /superadmin/orders
+// =====================================================================
+export const getAllOrdersForSA = catchAsyncErrors(async (req, res, next) => {
+    const page  = parseInt(req.query.page)  || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip  = (page - 1) * limit;
+
+    const [orders, total] = await Promise.all([
+        Order.find()
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .populate("user", "name email"),
+        Order.countDocuments(),
+    ]);
+
+    res.status(200).json({ success: true, orders, total, page, pages: Math.ceil(total / limit) });
 });

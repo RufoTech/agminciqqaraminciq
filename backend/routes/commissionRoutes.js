@@ -24,9 +24,10 @@ import {
     getAllSellerBalances,
     handlePashaPayWebhook,
     checkCommissionStatus,
+    simulateWebhook,
 } from "../controller/commissionController.js";
 
-import { isAuthenticatedUser, isApprovedSeller } from "../middleware/auth.js";
+import { isAuthenticatedUser, isApprovedSeller, isSuperAdmin } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -83,6 +84,17 @@ router.get("/admin/all",         isAuthenticatedUser, isApprovedSeller, getAllCo
 // GET /commission/admin/balances
 // Bütün satıcı balansları
 router.get("/admin/balances",    isAuthenticatedUser, isApprovedSeller, getAllSellerBalances);
+
+
+// ════════════════════════════════════════════════════════════════════════════
+//  DEMO / TEST — Yalnız simulation modunda
+// ════════════════════════════════════════════════════════════════════════════
+
+// POST /commission/simulate-webhook
+// Body: { providerOrderId: "sim_order_...", eventType: "SETTLED" | "FAILED" }
+// Demo-da pending → settled axınını göstərmək üçün istifadə olunur.
+// Yalnız SuperAdmin çağıra bilər; production-da controller öz-özünə 403 qaytarır.
+router.post("/simulate-webhook", isAuthenticatedUser, isSuperAdmin, simulateWebhook);
 
 
 export default router;

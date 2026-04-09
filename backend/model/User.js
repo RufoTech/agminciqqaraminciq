@@ -42,7 +42,9 @@ const userSchema = new mongoose.Schema(
         },
         password: {
             type:      String,
-            required:  [true, "Şifrənizi daxil edin"],
+            // Google ilə giriş edən istifadəçilər üçün şifrə məcburi deyil.
+            // required funksiyası — googleId olmadıqda məcburi edir.
+            required:  [function() { return !this.googleId && !this.appleId; }, "Şifrənizi daxil edin"],
             // select: false — şifrə sorğularda avtomatik GƏLMİR.
             // Giriş zamanı: User.findOne({email}).select("+password") lazımdır.
             select:    false,
@@ -166,6 +168,21 @@ const userSchema = new mongoose.Schema(
             type:    Number,
             default: 0,
             min:     0,
+        },
+
+        // ── GOOGLE OAuth ──────────────────────────────────────────────
+        googleId: {
+            type:   String,
+            sparse: true,
+            default: null,
+        },
+
+        // ── APPLE OAuth ───────────────────────────────────────────────
+        // Apple ilə giriş edən istifadəçilərin Apple profil ID-si.
+        appleId: {
+            type:   String,
+            sparse: true,
+            default: null,
         },
 
         // ── BLOK ─────────────────────────────────────────────────────

@@ -2,6 +2,12 @@
 // mongoose — Node.js ilə MongoDB arasında körpü rolunu oynayan kitabxanadır.
 // Birbaşa MongoDB driveri çox mürəkkəbdir; mongoose onu sadələşdirir.
 // Məsələn: mongoose.connect() — bağlantı, mongoose.Schema() — model yaratmaq üçündür.
+//
+// Mongoose-un əsas üstünlükləri:
+//   • Schema (şablon) — bazaya hansı formatlı məlumat girəcəyini təyin edir
+//   • Validation (yoxlama) — yanlış məlumatın bazaya düşməsinin qarşısını alır
+//   • Model — cədvəl əvəzinə istifadə olunur, CRUD əməliyyatları aparır
+//   • Middleware — yadda saxlamadan əvvəl/sonra kod işlətmək imkanı verir
 // ============================================================
 import mongoose from "mongoose";
 
@@ -15,6 +21,11 @@ import mongoose from "mongoose";
 // bağlanmaq istədiyimizi idarə edirik.
 // Adətən server.js və ya app.js faylında bir dəfə çağırılır:
 //   connectDatabase();
+//
+// Düzgün istifadə nümunəsi (server.js-də):
+//   import { connectDatabase } from "./config/database.js";
+//   connectDatabase();           // ← server başlayanda bir dəfə çağırılır
+//   app.listen(PORT, () => { }); // ← bağlantıdan sonra server dinləməyə başlayır
 // ============================================================
 export const connectDatabase = () => {
 
@@ -27,6 +38,11 @@ export const connectDatabase = () => {
     // bu da birbaşa xəta verəcək, sessiz keçməyəcək.
     // Bu, "fail loudly" (səs-küylü uğursuzluq) prinsipidir —
     // gizli xəta olmasından yaxşıdır.
+    //
+    // "Fail loudly" nə deməkdir?
+    //   Proqram səhv konfiqurasiya ilə işləməyə davam etmək əvəzinə
+    //   dərhal xəta verir — beləliklə proqramçı problemi gec deyil,
+    //   erkən görür. Gizli xətalar debug etmək çox çətindir.
     // ============================================================
     let DB_URI = "";
 
@@ -48,6 +64,12 @@ export const connectDatabase = () => {
     //
     // Bu ayrım sayəsində developer öz kompüterindəki bazanı
     // təsadüfən məhv etmir, real məlumatları pozmur.
+    //
+    // process.env — Node.js-in mühit dəyişənləri obyektidir.
+    // .env faylındakı bütün dəyərlər buradan oxunur.
+    // dotenv kitabxanası bu dəyərləri process.env-ə yükləyir:
+    //   import dotenv from "dotenv";
+    //   dotenv.config(); // ← bu olmasa process.env.NODE_ENV undefined olur
     // ============================================================
     if (process.env.NODE_ENV === "DEVELOPMENT") DB_URI = process.env.LOCAL_URI;
     if (process.env.NODE_ENV === "PRODUCTION")  DB_URI = process.env.DB_URI;
@@ -59,6 +81,7 @@ export const connectDatabase = () => {
     // Bu funksiya Node.js prosesini MongoDB serverinə qoşur.
     // Qoşulma bir dəfə qurulur və bütün uygulama boyu açıq qalır.
     // Hər sorğuda yenidən qoşulmur — bu performansı artırır.
+    // (Bu pattern "connection pooling" adlanır — bağlantı hovuzu)
     //
     // mongoose.connect() bir "Promise" qaytarır:
     //   — .then()  → qoşulma uğurlu olduqda işləyir
@@ -69,6 +92,12 @@ export const connectDatabase = () => {
     //   async/await versiyası belə olardı:
     //     try { await mongoose.connect(DB_URI); }
     //     catch(err) { console.error(err); }
+    //
+    // Promise nədir?
+    //   Gələcəkdə tamamlanacaq əməliyyatı təmsil edən obyektdir.
+    //   Üç vəziyyəti var: pending (gözlənir) → fulfilled (uğurlu) → rejected (uğursuz)
+    //   Bağlantı qurulana qədər "pending", qurulandan sonra "fulfilled",
+    //   xəta olduqda isə "rejected" vəziyyətinə keçir.
     // ============================================================
     mongoose.connect(DB_URI)
 
@@ -85,9 +114,15 @@ export const connectDatabase = () => {
         //   aşağıdakıları əlavə etmək tövsiyə olunur:
         //
         //   console.log(`✅ Baza qoşuldu: ${con.connection.host}`);
+        //   console.log(`📦 Baza adı: ${con.connection.name}`);
         //
         //   Bu log sayəsində server başlayanda hansı bazaya
         //   qoşulduğunu dərhal görə bilirik — debug üçün çox faydalıdır.
+        //
+        // "con" obyektinin digər faydalı sahələri:
+        //   con.connection.port      → bağlantı portu (default: 27017)
+        //   con.connection.readyState → 1 = qoşulub, 0 = kəsilib
+        //   con.connection.models    → qeydiyyatdan keçmiş bütün modellər
         // ============================================================
         .then((con) => {
         })
@@ -106,6 +141,8 @@ export const connectDatabase = () => {
         // "err" obyektinin içində xətanın tam izahı var:
         //   err.message → qısa açıqlama
         //   err.stack   → xətanın kodda harada baş verdiyini göstərir
+        //   err.name    → xəta növü (məs: "MongoServerError", "MongoNetworkError")
+        //   err.code    → xəta kodu (məs: 8000 = authentication xətası)
         //
         // console.error() — console.log()-dan fərqli olaraq
         // xətaları qırmızı rənglə göstərir (terminaldə daha görünən olur).
@@ -114,6 +151,12 @@ export const connectDatabase = () => {
         //   process.exit(1) — baza olmadan server işləməsin deyə
         //   prosesi dayandırmaq üçün istifadə olunur.
         //   Çünki baza olmadan API sorğuları cavabsız qalacaq.
+        //
+        //   Tövsiyə olunan tam versiya:
+        //     .catch((err) => {
+        //         console.error("❌ Baza xətası:", err.message);
+        //         process.exit(1); // ← 1 = xəta ilə çıxış (0 = normal çıxış)
+        //     });
         // ============================================================
         .catch((err) => {
             console.error("Verilənlər bazasına qoşularkən xəta baş verdi:", err);

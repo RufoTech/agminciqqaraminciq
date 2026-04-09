@@ -21,6 +21,8 @@ import {
   unblockUser,
   deleteUser,
   toggleBloggerStatus,
+  getAdminReviews,
+  getAllOrdersForSA,
 } from "../controller/superAdminController.js";
 
 import {
@@ -62,5 +64,11 @@ router.patch("/bloggers/:id/toggle-status", isAuthenticatedUser, isSuperAdmin, t
 
 // ===================== SUPERADMİN SİYAHISI =====================
 router.get("/superadmins", isAuthenticatedUser, isSuperAdmin, getAllSuperAdmins);
+
+// ===================== SATICI RƏYLƏRİ =====================
+router.get("/admins/:id/reviews", isAuthenticatedUser, isSuperAdmin, getAdminReviews);
+
+// ===================== BÜTÜN SİFARİŞLƏR =====================
+router.get("/orders", isAuthenticatedUser, isSuperAdmin, getAllOrdersForSA);
 
 export default router;

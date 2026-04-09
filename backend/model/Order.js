@@ -91,21 +91,22 @@ const orderSchema = new mongoose.Schema(
         ],
 
         // ── ÖDƏNIŞ MƏLUMATLARI ────────────────────────────────────────
-        // paymentInfo — Stripe ödənişinin detalları.
-        // Bu məlumatlar ödənişi izləmək, sübut etmək üçün saxlanılır.
+        // paymentInfo — Ödəniş detalları
         paymentInfo: {
-            // stripePaymentId — Stripe-dakı PaymentIntent ID-si.
-            // Formatı: "pi_3Qv..." — Stripe dashboard-da bu ID ilə axtarış.
-            // orderController-da duplikat yoxlaması üçün istifadə olunur:
-            //   Order.findOne({"paymentInfo.stripePaymentId": id})
-            stripePaymentId: {
+            // paymentId — Stripe PaymentIntent ID və ya PashaPay Order ID ya da Simulation ID.
+            paymentId: {
                 type:     String,
                 required: true,
             },
 
+            // provider — hansı sistem vasitəsilə ödənilib
+            provider: {
+                type: String,
+                enum: ["stripe", "pashapay", "simulation"],
+                default: "simulation"
+            },
+
             // status — ödənişin vəziyyəti.
-            //   "paid"  → Stripe ödənişi tamamlandı (real mühit)
-            //   "test"  → test modu (ödəniş tamamlanmayıb amma sifariş yaradıldı)
             status: {
                 type:    String,
                 default: "paid",
@@ -184,6 +185,13 @@ const orderSchema = new mongoose.Schema(
           type:    String,
           enum:    ["code", "link", null],
           default: null,
+        },
+
+        // ── ALICI ÇEKİ ───────────────────────────────────────────────
+        // Ödəniş tamamlandıqda yaradılan PDF çekin server yolu.
+        receiptUrl: {
+            type:    String,
+            default: null,
         },
     },
     {

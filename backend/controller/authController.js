@@ -37,6 +37,53 @@ import { sendEmail } from "../utils/sendEmail.js";
 // crypto — Node.js-in daxili kriptoqrafiya modulu.
 // Şifrə sıfırlama token-ini SHA-256 ilə hash etmək üçün istifadə olunur.
 import crypto from "crypto";
+import { OAuth2Client } from "google-auth-library";
+import jwt from "jsonwebtoken";
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// ── OAuth köməkçi funksiyaları ──────────────────────────────────────
+const BACKEND_BASE  = () => process.env.BACKEND_URL  || `http://localhost:${process.env.PORT || 3011}`;
+const FRONTEND_BASE = () => (process.env.FRONTEND_URL || "http://localhost:5173").split(",")[0].trim();
+
+// Cookie + redirect helper — OAuth callback-larında istifadə olunur
+const setOAuthCookieAndRedirect = (res, user) => {
+    const isProduction = process.env.NODE_ENV === "PRODUCTION";
+    const expiresDays  = Number(process.env.COOKIE_EXPIRES_TIME) || 7;
+    const cookieOpts   = {
+        expires:  new Date(Date.now() + expiresDays * 24 * 60 * 60 * 1000),
+        httpOnly: true,
+        sameSite: isProduction ? "none" : "lax",
+        secure:   isProduction,
+    };
+    const userObj = {
+        _id:          user._id,
+        name:         user.name,
+        email:        user.email,
+        role:         user.role,
+        sellerStatus: user.sellerStatus || null,
+        sellerInfo:   user.sellerInfo   || null,
+    };
+    const data = Buffer.from(JSON.stringify(userObj)).toString("base64");
+    res.cookie("token", user.jwtTokeniEldeEt(), cookieOpts)
+       .redirect(`${FRONTEND_BASE()}/auth/callback?data=${data}`);
+};
+
+// Apple client_secret — ES256 JWT (6 ay etibarlı)
+const generateAppleClientSecret = () => {
+    const privateKey = (process.env.APPLE_PRIVATE_KEY || "").replace(/\\n/g, "\n");
+    return jwt.sign(
+        {
+            iss: process.env.APPLE_TEAM_ID,
+            iat: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + 86400 * 180,
+            aud: "https://appleid.apple.com",
+            sub: process.env.APPLE_CLIENT_ID,
+        },
+        privateKey,
+        { algorithm: "ES256", keyid: process.env.APPLE_KEY_ID }
+    );
+};
 
 // Product — məhsul modeli. Mağaza səhifəsində həmin mağazanın
 // məhsullarını çəkmək üçün lazımdır.
@@ -292,13 +339,16 @@ export const getStoreBySlug = catchAsyncErrors(async (req, res, next) => {
     res.status(200).json({
         success: true,
         store: {
+            _id:          user._id,
             storeName:    user.sellerInfo.storeName,
             storeSlug:    user.sellerInfo.storeSlug,
             storeAddress: user.sellerInfo.storeAddress,
-            phone:        user.sellerInfo.phone,   // telefon artıq göstərilir
+            phone:        user.sellerInfo.phone,
             storeRating,
             totalReviews,
-            isBlocked:    user.isBlocked || false,
+            avgRating:    user.avgRating  || 0,
+            numReviews:   user.numReviews || 0,
+            isBlocked:    user.isBlocked  || false,
         },
         products,
         totalProducts: products.length,
@@ -544,4 +594,205 @@ export const resetPassword = catchAsyncErrors(async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
 
     sendToken(user, 200, res);
+});
+
+
+// =====================================================================
+// GOOGLE İLƏ GİRİŞ — googleLogin
+// ---------------------------------------------------------------------
+// POST /commerce/mehsullar/auth/google
+// Body: { credential } — Google-ın frontend-ə verdiyi ID token
+//
+// Axın:
+//   1. Google ID tokenini doğrula (google-auth-library ilə)
+//   2. Emaili bazada axtar
+//   3. Tapıldısa → googleId yenilə (əgər yoxdursa) → giriş et
+//   4. Tapılmadısa → yeni User yarat → giriş et
+// =====================================================================
+// =====================================================================
+// GOOGLE — REDIRECT (yeni axın)
+// GET /auth/google → Google login səhifəsinə yönləndir
+// =====================================================================
+export const googleAuthRedirect = (req, res) => {
+    const params = new URLSearchParams({
+        client_id:     process.env.GOOGLE_CLIENT_ID,
+        redirect_uri:  `${BACKEND_BASE()}/commerce/mehsullar/auth/google/callback`,
+        response_type: "code",
+        scope:         "openid email profile",
+        access_type:   "offline",
+        prompt:        "select_account",
+    });
+    res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+};
+
+// =====================================================================
+// GOOGLE — CALLBACK (yeni axın)
+// GET /auth/google/callback → Google code-u token-ə dəyiş, user yarat/tap
+// =====================================================================
+export const googleAuthCallback = catchAsyncErrors(async (req, res, next) => {
+    const { code, error } = req.query;
+    const FRONTEND = FRONTEND_BASE();
+
+    if (error || !code) return res.redirect(`${FRONTEND}/login?error=google_cancelled`);
+
+    // Code → tokens
+    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+        method:  "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body:    new URLSearchParams({
+            code,
+            client_id:     process.env.GOOGLE_CLIENT_ID,
+            client_secret: process.env.GOOGLE_CLIENT_SECRET,
+            redirect_uri:  `${BACKEND_BASE()}/commerce/mehsullar/auth/google/callback`,
+            grant_type:    "authorization_code",
+        }),
+    });
+    const tokens = await tokenRes.json();
+    if (!tokens.id_token) return res.redirect(`${FRONTEND}/login?error=google_failed`);
+
+    // id_token doğrula
+    const ticket = await googleClient.verifyIdToken({
+        idToken:  tokens.id_token,
+        audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const { sub: googleId, email, name, picture } = ticket.getPayload();
+    if (!email) return res.redirect(`${FRONTEND}/login?error=no_email`);
+
+    let user = await User.findOne({ email });
+    if (user) {
+        if (user.isBlocked) return res.redirect(`${FRONTEND}/login?error=blocked`);
+        if (!user.googleId) { user.googleId = googleId; await user.save({ validateBeforeSave: false }); }
+    } else {
+        user = await User.create({ name, email, googleId, avatar: { url: picture || "" } });
+        notifyWelcome(user).catch(() => {});
+    }
+
+    setOAuthCookieAndRedirect(res, user);
+});
+
+// =====================================================================
+// APPLE — REDIRECT
+// GET /auth/apple → Apple login səhifəsinə yönləndir
+// =====================================================================
+export const appleAuthRedirect = (req, res) => {
+    if (!process.env.APPLE_CLIENT_ID) {
+        return res.redirect(`${FRONTEND_BASE()}/login?error=apple_not_configured`);
+    }
+    const params = new URLSearchParams({
+        client_id:     process.env.APPLE_CLIENT_ID,
+        redirect_uri:  `${BACKEND_BASE()}/commerce/mehsullar/auth/apple/callback`,
+        response_type: "code id_token",
+        scope:         "name email",
+        response_mode: "form_post",
+    });
+    res.redirect(`https://appleid.apple.com/auth/authorize?${params}`);
+};
+
+// =====================================================================
+// APPLE — CALLBACK (POST — Apple form_post göndərir)
+// POST /auth/apple/callback
+// =====================================================================
+export const appleAuthCallback = catchAsyncErrors(async (req, res, next) => {
+    const FRONTEND = FRONTEND_BASE();
+    if (!process.env.APPLE_CLIENT_ID) return res.redirect(`${FRONTEND}/login?error=apple_not_configured`);
+
+    const { code, id_token, user: userStr, error } = req.body;
+    if (error || !code) return res.redirect(`${FRONTEND}/login?error=apple_cancelled`);
+
+    // Code → tokens (Apple token endpoint)
+    let applePayload;
+    try {
+        const clientSecret = generateAppleClientSecret();
+        const tokenRes = await fetch("https://appleid.apple.com/auth/token", {
+            method:  "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body:    new URLSearchParams({
+                client_id:     process.env.APPLE_CLIENT_ID,
+                client_secret: clientSecret,
+                code,
+                grant_type:    "authorization_code",
+                redirect_uri:  `${BACKEND_BASE()}/commerce/mehsullar/auth/apple/callback`,
+            }),
+        });
+        const tokens = await tokenRes.json();
+        if (!tokens.id_token) return res.redirect(`${FRONTEND}/login?error=apple_failed`);
+        // id_token-i decode et (Apple-dan gəldiyinə etibar edirik)
+        const parts = tokens.id_token.split(".");
+        applePayload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf8"));
+    } catch {
+        return res.redirect(`${FRONTEND}/login?error=apple_failed`);
+    }
+
+    const { sub: appleId, email } = applePayload;
+    if (!appleId) return res.redirect(`${FRONTEND}/login?error=apple_no_id`);
+
+    // İlk girişdə Apple adı göndərir
+    let name = "Apple İstifadəçi";
+    if (userStr) {
+        try {
+            const ud = JSON.parse(userStr);
+            const fn = ud.name?.firstName || "";
+            const ln = ud.name?.lastName  || "";
+            name = `${fn} ${ln}`.trim() || name;
+        } catch {}
+    }
+
+    const query = [{ appleId }];
+    if (email) query.push({ email });
+    let user = await User.findOne({ $or: query });
+    if (user) {
+        if (user.isBlocked) return res.redirect(`${FRONTEND}/login?error=blocked`);
+        if (!user.appleId) { user.appleId = appleId; await user.save({ validateBeforeSave: false }); }
+    } else {
+        user = await User.create({
+            name,
+            email: email || `apple_${appleId}@brendex.local`,
+            appleId,
+        });
+        notifyWelcome(user).catch(() => {});
+    }
+
+    setOAuthCookieAndRedirect(res, user);
+});
+
+
+
+// =====================================================================
+// BÜTÜN MAĞAZALAR — getAllStores (açıq endpoint)
+// GET /stores?sort=rating|name&page=1&limit=20
+// Alıcılar üçün mağazaları sıralamaq ilə göstərir.
+// sort=rating (default) → avgRating-ə görə azalan sıra (yaxşı üstdə)
+// sort=name             → əlifba sırasıyla
+// =====================================================================
+export const getAllStores = catchAsyncErrors(async (req, res, next) => {
+    const page  = parseInt(req.query.page)  || 1;
+    const limit = parseInt(req.query.limit) || 24;
+    const skip  = (page - 1) * limit;
+    const sort  = req.query.sort === "name"
+        ? { "sellerInfo.storeName": 1 }
+        : { avgRating: -1, numReviews: -1 };  // reytinqə görə (yaxşı üstdə)
+
+    const [stores, total] = await Promise.all([
+        Admin.find({ sellerStatus: "approved", isBlocked: false })
+            .select("sellerInfo.storeName sellerInfo.storeSlug sellerInfo.storeAddress avgRating numReviews createdAt")
+            .sort(sort)
+            .skip(skip)
+            .limit(limit),
+        Admin.countDocuments({ sellerStatus: "approved", isBlocked: false }),
+    ]);
+
+    res.status(200).json({
+        success: true,
+        stores:  stores.map(s => ({
+            _id:          s._id,
+            storeName:    s.sellerInfo.storeName,
+            storeSlug:    s.sellerInfo.storeSlug,
+            storeAddress: s.sellerInfo.storeAddress || "",
+            avgRating:    s.avgRating   || 0,
+            numReviews:   s.numReviews  || 0,
+        })),
+        total,
+        page,
+        pages: Math.ceil(total / limit),
+    });
 });
