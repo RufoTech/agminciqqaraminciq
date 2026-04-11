@@ -1,634 +1,88 @@
-export const getResetPasswordTemplate = (istifadeciAdi, sifirlamaLinki) => `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
- <head>
-   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-   <meta name="x-apple-disable-message-reformatting" />
-   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-   <meta name="color-scheme" content="light dark" />
-   <meta name="supported-color-schemes" content="light dark" />
-   <title></title>
-   <style type="text/css" rel="stylesheet" media="all">
-     @import url("https://fonts.googleapis.com/css?family=Nunito+Sans:400,700&display=swap");
-     body {
-       width: 100% !important;
-       height: 100%;
-       margin: 0;
-       -webkit-text-size-adjust: none;
-     }
-
-
-     a {
-       color: #3869d4;
-     }
-
-
-     a img {
-       border: none;
-     }
-
-
-     td {
-       word-break: break-word;
-     }
-
-
-     .preheader {
-       display: none !important;
-       visibility: hidden;
-       mso-hide: all;
-       font-size: 1px;
-       line-height: 1px;
-       max-height: 0;
-       max-width: 0;
-       opacity: 0;
-       overflow: hidden;
-     }
-
-
-     body,
-     td,
-     th {
-       font-family: "Nunito Sans", Helvetica, Arial, sans-serif;
-     }
-
-
-     h1 {
-       margin-top: 0;
-       color: #333333;
-       font-size: 22px;
-       font-weight: bold;
-       text-align: left;
-     }
-
-
-     h2 {
-       margin-top: 0;
-       color: #333333;
-       font-size: 16px;
-       font-weight: bold;
-       text-align: left;
-     }
-
-
-     h3 {
-       margin-top: 0;
-       color: #333333;
-       font-size: 14px;
-       font-weight: bold;
-       text-align: left;
-     }
-
-
-     td,
-     th {
-       font-size: 16px;
-     }
-
-
-     p,
-     ul,
-     ol,
-     blockquote {
-       margin: 0.4em 0 1.1875em;
-       font-size: 16px;
-       line-height: 1.625;
-     }
-
-
-     p.sub {
-       font-size: 13px;
-     }
-
-
-     .align-right {
-       text-align: right;
-     }
-
-
-     .align-left {
-       text-align: left;
-     }
-
-
-     .align-center {
-       text-align: center;
-     }
-
-
-     .u-margin-bottom-none {
-       margin-bottom: 0;
-     }
-
-
-     .button {
-       background-color: #3869d4;
-       border-top: 10px solid #3869d4;
-       border-right: 18px solid #3869d4;
-       border-bottom: 10px solid #3869d4;
-       border-left: 18px solid #3869d4;
-       display: inline-block;
-       color: #fff;
-       text-decoration: none;
-       border-radius: 3px;
-       box-shadow: 0 2px 3px rgba(0, 0, 0, 0.16);
-       -webkit-text-size-adjust: none;
-       box-sizing: border-box;
-     }
-
-
-     .button--green {
-       background-color: #ffce08;
-       border-top: 10px solid #ffce08;
-       border-right: 18px solid #ffce08;
-       border-bottom: 10px solid #ffce08;
-       border-left: 18px solid #ffce08;
-     }
-
-
-     .button--red {
-       background-color: #ff6136;
-       border-top: 10px solid #ff6136;
-       border-right: 18px solid #ff6136;
-       border-bottom: 10px solid #ff6136;
-       border-left: 18px solid #ff6136;
-     }
-
-
-     @media only screen and (max-width: 500px) {
-       .button {
-         width: 100% !important;
-         text-align: center !important;
-       }
-     }
-
-
-     .attributes {
-       margin: 0 0 21px;
-     }
-
-
-     .attributes_content {
-       background-color: #f4f4f7;
-       padding: 16px;
-     }
-
-
-     .attributes_item {
-       padding: 0;
-     }
-
-
-     .related {
-       width: 100%;
-       margin: 0;
-       padding: 25px 0 0 0;
-       -premailer-width: 100%;
-       -premailer-cellpadding: 0;
-       -premailer-cellspacing: 0;
-     }
-
-
-     .related_item {
-       padding: 10px 0;
-       color: #cbcccf;
-       font-size: 15px;
-       line-height: 18px;
-     }
-
-
-     .related_item-title {
-       display: block;
-       margin: 0.5em 0 0;
-     }
-
-
-     .related_item-thumb {
-       display: block;
-       padding-bottom: 10px;
-     }
-
-
-     .related_heading {
-       border-top: 1px solid #cbcccf;
-       text-align: center;
-       padding: 25px 0 10px;
-     }
-
-
-     .discount {
-       width: 100%;
-       margin: 0;
-       padding: 24px;
-       -premailer-width: 100%;
-       -premailer-cellpadding: 0;
-       -premailer-cellspacing: 0;
-       background-color: #f4f4f7;
-       border: 2px dashed #cbcccf;
-     }
-
-
-     .discount_heading {
-       text-align: center;
-     }
-
-
-     .discount_body {
-       text-align: center;
-       font-size: 15px;
-     }
-
-
-     .social {
-       width: auto;
-     }
-
-
-     .social td {
-       padding: 0;
-       width: auto;
-     }
-
-
-     .social_icon {
-       height: 20px;
-       margin: 0 8px 10px 8px;
-       padding: 0;
-     }
-
-
-     .purchase {
-       width: 100%;
-       margin: 0;
-       padding: 35px 0;
-       -premailer-width: 100%;
-       -premailer-cellpadding: 0;
-       -premailer-cellspacing: 0;
-     }
-
-
-     .purchase_content {
-       width: 100%;
-       margin: 0;
-       padding: 25px 0 0 0;
-       -premailer-width: 100%;
-       -premailer-cellpadding: 0;
-       -premailer-cellspacing: 0;
-     }
-
-
-     .purchase_item {
-       padding: 10px 0;
-       color: #51545e;
-       font-size: 15px;
-       line-height: 18px;
-     }
-
-
-     .purchase_heading {
-       padding-bottom: 8px;
-       border-bottom: 1px solid #eaeaec;
-     }
-
-
-     .purchase_heading p {
-       margin: 0;
-       color: #85878e;
-       font-size: 12px;
-     }
-
-
-     .purchase_footer {
-       padding-top: 15px;
-       border-top: 1px solid #eaeaec;
-     }
-
-
-     .purchase_total {
-       margin: 0;
-       text-align: right;
-       font-weight: bold;
-       color: #333333;
-     }
-
-
-     .purchase_total--label {
-       padding: 0 15px 0 0;
-     }
-
-
-     body {
-       background-color: #f2f4f6;
-       color: #51545e;
-     }
-
-
-     p {
-       color: #51545e;
-     }
-
-
-     .email-wrapper {
-       width: 100%;
-       margin: 0;
-       padding: 0;
-       -premailer-width: 100%;
-       -premailer-cellpadding: 0;
-       -premailer-cellspacing: 0;
-       background-color: #f2f4f6;
-     }
-
-
-     .email-content {
-       width: 100%;
-       margin: 0;
-       padding: 0;
-       -premailer-width: 100%;
-       -premailer-cellpadding: 0;
-       -premailer-cellspacing: 0;
-     }
-
-
-     .email-masthead {
-       padding: 25px 0;
-       text-align: center;
-     }
-
-
-     .email-masthead_logo {
-       width: 94px;
-     }
-
-
-     .email-masthead_name {
-       font-size: 16px;
-       font-weight: bold;
-       color: #a8aaaf;
-       text-decoration: none;
-       text-shadow: 0 1px 0 white;
-     }
-
-
-     .email-body {
-       width: 100%;
-       margin: 0;
-       padding: 0;
-       -premailer-width: 100%;
-       -premailer-cellpadding: 0;
-       -premailer-cellspacing: 0;
-     }
-
-
-     .email-body_inner {
-       width: 570px;
-       margin: 0 auto;
-       padding: 0;
-       -premailer-width: 570px;
-       -premailer-cellpadding: 0;
-       -premailer-cellspacing: 0;
-       background-color: #ffffff;
-     }
-
-
-     .email-footer {
-       width: 570px;
-       margin: 0 auto;
-       padding: 0;
-       -premailer-width: 570px;
-       -premailer-cellpadding: 0;
-       -premailer-cellspacing: 0;
-       text-align: center;
-     }
-
-
-     .email-footer p {
-       color: #a8aaaf;
-     }
-
-
-     .body-action {
-       width: 100%;
-       margin: 30px auto;
-       padding: 0;
-       -premailer-width: 100%;
-       -premailer-cellpadding: 0;
-       -premailer-cellspacing: 0;
-       text-align: center;
-     }
-
-
-     .body-sub {
-       margin-top: 25px;
-       padding-top: 25px;
-       border-top: 1px solid #eaeaec;
-     }
-
-
-     .content-cell {
-       padding: 45px;
-     }
-
-
-     @media only screen and (max-width: 600px) {
-       .email-body_inner,
-       .email-footer {
-         width: 100% !important;
-       }
-     }
-
-
-     @media (prefers-color-scheme: dark) {
-       body,
-       .email-body,
-       .email-body_inner,
-       .email-content,
-       .email-wrapper,
-       .email-masthead,
-       .email-footer {
-         background-color: #333333 !important;
-         color: #fff !important;
-       }
-       p,
-       ul,
-       ol,
-       blockquote,
-       h1,
-       h2,
-       h3,
-       span,
-       .purchase_item {
-         color: #fff !important;
-       }
-       .attributes_content,
-       .discount {
-         background-color: #222 !important;
-       }
-       .email-masthead_name {
-         text-shadow: none !important;
-       }
-     }
-
-
-     :root {
-       color-scheme: light dark;
-       supported-color-schemes: light dark;
-     }
-   </style>
-   <!--[if mso]>
-     <style type="text/css">
-       .f-fallback {
-         font-family: Arial, sans-serif;
-       }
-     </style>
-   <![endif]-->
- </head>
- <body>
-   <span class="preheader"
-     >Use this link to reset your password. The link is only valid for 30
-     minutes.</span
-   >
-   <table
-     class="email-wrapper"
-     width="100%"
-     cellpadding="0"
-     cellspacing="0"
-     role="presentation"
-   >
-     <tr>
-       <td align="center">
-         <table
-           class="email-content"
-           width="100%"
-           cellpadding="0"
-           cellspacing="0"
-           role="presentation"
-         >
-           <tr>
-             <td class="email-masthead">
-               <a
-                 href="https://anvarkhalid.com"
-                 class="f-fallback email-masthead_name"
-               >
-                 Anvar Khalid
-               </a>
-             </td>
-           </tr>
-
-
-           <tr>
-             <td
-               class="email-body"
-               width="570"
-               cellpadding="0"
-               cellspacing="0"
-             >
-               <table
-                 class="email-body_inner"
-                 align="center"
-                 width="570"
-                 cellpadding="0"
-                 cellspacing="0"
-                 role="presentation"
-               >
-                 <tr>
-                   <td class="content-cell">
-                     <div class="f-fallback">
-                       <h1>Hi ${istifadeciAdi},</h1>
-                       <p>
-                         You recently requested to reset your password for your
-                         Anvar Khalid account. Use the button below to reset it.
-                         <strong
-                           >This password reset is only valid for the next 30
-                           minutes.</strong
-                         >
-                       </p>
-
-
-                       <table
-                         class="body-action"
-                         align="center"
-                         width="100%"
-                         cellpadding="0"
-                         cellspacing="0"
-                         role="presentation"
-                       >
-                         <tr>
-                           <td align="center">
-                             <table
-                               width="100%"
-                               border="0"
-                               cellspacing="0"
-                               cellpadding="0"
-                               role="presentation"
-                             >
-                               <tr>
-                                 <td align="center">
-                                   <a
-                                     href="${sifirlamaLinki}"
-                                     class="f-fallback button button--green"
-                                     target="_blank"
-                                     >Shifreni sifirla</a
-                                   >
-                                 </td>
-                               </tr>
-                             </table>
-                           </td>
-                         </tr>
-                       </table>
-                       <p>
-                         If you did not request a password reset, please ignore
-                         this email or
-                         <a href="{{support_url}}">contact support</a> if you
-                         have questions.
-                       </p>
-                       <p>Thanks, <br />The Anvar Khalid team</p>
-
-
-
-
-                       <table class="body-sub" role="presentation">
-                         <tr>
-                           <td>
-                             <p class="f-fallback sub">
-                               If you’re having trouble with the button above,
-                               copy and paste the URL below into your web
-                               browser.
-                             </p>
-                             <p class="f-fallback sub">
-                               <a href="${sifirlamaLinki}">${sifirlamaLinki}</a>
-                             </p>
-                           </td>
-                         </tr>
-                       </table>
-                     </div>
-                   </td>
-                 </tr>
-               </table>
-             </td>
-           </tr>
-           <tr>
-             <td>
-               <table
-                 class="email-footer"
-                 align="center"
-                 width="570"
-                 cellpadding="0"
-                 cellspacing="0"
-                 role="presentation"
-               >
-                 <tr>
-                   <td class="content-cell" align="center">
-                     <p class="f-fallback sub align-center">
-                       Anvar Khalid
-                       <br />Baku, Azerbaijan. <br /> Sergey Yesenin 104
-                     </p>
-                   </td>
-                 </tr>
-               </table>
-             </td>
-           </tr>
-         </table>
-       </td>
-     </tr>
-   </table>
- </body>
-</html>`
+export const getResetPasswordText = (istifadeciAdi, sifirlamaLinki) => `Brendex Group | Sifre sifirlama isteyi
+
+Salam ${istifadeciAdi || "istifadeci"},
+
+Brendex hesabiniz ucun real sifre sifirlama isteyi qebul edildi.
+
+Yeni sifre teyin etmek ucun bu linke daxil olun:
+${sifirlamaLinki}
+
+Bu link 30 deqiqe aktiv olacaq.
+
+Eger bu sorgunu siz gondermemisinizse, bu mesaji nezere almayin. Movcud sifreniz deyisdirilmeyecek.
+
+Hormatle,
+Brendex Group`;
+
+export const getResetPasswordTemplate = (istifadeciAdi, sifirlamaLinki) => `<!DOCTYPE html>
+<html lang="az">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="x-apple-disable-message-reformatting" />
+    <title>Brendex - Şifrə sıfırlama</title>
+  </head>
+  <body style="margin:0;padding:0;background:#f4efe7;font-family:Arial,sans-serif;color:#1f2937;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4efe7;padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;background:#fffdf8;border-radius:28px;overflow:hidden;border:1px solid #eadfce;">
+            <tr>
+              <td style="padding:32px 36px;background:linear-gradient(135deg,#20130a 0%,#5f3a21 100%);color:#fff7ed;">
+                <div style="font-size:12px;letter-spacing:0.28em;text-transform:uppercase;opacity:0.72;">Brendex Group Security</div>
+                <h1 style="margin:14px 0 10px;font-size:32px;line-height:1.2;color:#ffffff;">Real şifrə sıfırlama istəyi</h1>
+                <p style="margin:0;font-size:15px;line-height:1.7;color:#f6e7d7;">
+                  Hesabınız üçün yeni şifrə təyin etmək istəyirsinizsə, aşağıdakı düymədən davam edin.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:36px;">
+                <p style="margin:0 0 16px;font-size:16px;line-height:1.7;color:#374151;">
+                  Salam ${istifadeciAdi || "istifadəçi"},
+                </p>
+                <p style="margin:0 0 16px;font-size:15px;line-height:1.8;color:#4b5563;">
+                  Brendex Group tərəfindən hesabınız üçün şifrə sıfırlama istəyi qəbul edildi. Bu sorğu sizə məxsusdursa, aşağıdakı düyməyə klik edib yeni şifrə təyin edin.
+                </p>
+                <p style="margin:0 0 24px;font-size:15px;line-height:1.8;color:#4b5563;">
+                  Təhlükəsizlik üçün bu link yalnız <strong>30 dəqiqə</strong> aktiv qalır.
+                </p>
+                <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 0 24px;">
+                  <tr>
+                    <td>
+                      <a
+                        href="${sifirlamaLinki}"
+                        target="_blank"
+                        style="display:inline-block;padding:14px 24px;border-radius:999px;background:#c67c2f;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;"
+                      >
+                        Şifrəni yenilə
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+                <div style="padding:18px 20px;border-radius:20px;background:#f8f3eb;border:1px solid #eadfce;margin-bottom:24px;">
+                  <p style="margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#8b5e34;">
+                    Düymə işləmirsə
+                  </p>
+                  <p style="margin:0;font-size:14px;line-height:1.7;color:#5b6472;word-break:break-word;">
+                    <a href="${sifirlamaLinki}" style="color:#9a5b1d;text-decoration:none;">${sifirlamaLinki}</a>
+                  </p>
+                </div>
+                <p style="margin:0 0 12px;font-size:15px;line-height:1.8;color:#4b5563;">
+                  Bu sorğunu siz etməmisinizsə, emaili nəzərə almayın. Mövcud şifrəniz dəyişdirilməyəcək.
+                </p>
+                <p style="margin:0;font-size:15px;line-height:1.8;color:#374151;">
+                  Hörmətlə,<br />
+                  Brendex Group
+                </p>
+              </td>
+            </tr>
+          </table>
+          <p style="max-width:640px;margin:18px auto 0;font-size:12px;line-height:1.7;color:#7b7280;text-align:center;">
+            Bu təhlükəsizlik emaili Brendex Group tərəfindən hesabınız üçün avtomatik göndərilib.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;

@@ -19,11 +19,18 @@ import { Resend } from "resend";
 // =====================================================================
 export const sendEmail = async (options) => {
     const resend = new Resend(process.env.RESEND_API_KEY);
+    const senderName = process.env.SMTP_FROM_NAME || "Brendex Group";
+    const senderEmail =
+        process.env.SMTP_FROM_EMAIL ||
+        process.env.RESEND_FROM_EMAIL ||
+        "onboarding@resend.dev";
 
     await resend.emails.send({
-        from:    `${process.env.SMTP_FROM_NAME || "Brendex"} <${process.env.SMTP_FROM_EMAIL || "noreply@brendex.az"}>`,
+        from:    `${senderName} <${senderEmail}>`,
         to:      options.email,
         subject: options.subject,
         html:    options.message,
+        text:    options.text,
+        replyTo: process.env.SMTP_REPLY_TO || senderEmail,
     });
 };

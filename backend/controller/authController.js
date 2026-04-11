@@ -29,7 +29,10 @@ import sendToken from "../utils/sendToken.js";
 
 // getResetPasswordTemplate — şifrə sıfırlama emailinin HTML şablonunu qaytarır.
 // İstifadəçinin adı və sıfırlama linki daxil edilir.
-import { getResetPasswordTemplate } from "../utils/emailTemplates.js";
+import {
+    getResetPasswordTemplate,
+    getResetPasswordText,
+} from "../utils/emailTemplates.js";
 
 // sendEmail — SMTP vasitəsilə email göndərmək üçün yardımçı funksiya.
 import { sendEmail } from "../utils/sendEmail.js";
@@ -45,6 +48,45 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 // ── OAuth köməkçi funksiyaları ──────────────────────────────────────
 const BACKEND_BASE  = () => process.env.BACKEND_URL  || `http://localhost:${process.env.PORT || 3011}`;
 const FRONTEND_BASE = () => (process.env.FRONTEND_URL || "http://localhost:5173").split(",")[0].trim();
+
+const getDisplayName = (account) =>
+    account?.name ||
+    [account?.firstName, account?.lastName].filter(Boolean).join(" ").trim() ||
+    "İstifadəçi";
+
+const findAccountByEmail = async (email) => {
+    let account = await SuperAdmin.findOne({ email });
+    if (!account) account = await Admin.findOne({ email });
+    if (!account) account = await Blogger.findOne({ email });
+    if (!account) account = await User.findOne({ email });
+    return account;
+};
+
+const findAccountByResetToken = async (resetPasswordToken) => {
+    let account = await SuperAdmin.findOne({
+        resetPasswordToken,
+        resetPasswordExpire: { $gt: Date.now() },
+    });
+    if (!account) {
+        account = await Admin.findOne({
+            resetPasswordToken,
+            resetPasswordExpire: { $gt: Date.now() },
+        });
+    }
+    if (!account) {
+        account = await Blogger.findOne({
+            resetPasswordToken,
+            resetPasswordExpire: { $gt: Date.now() },
+        });
+    }
+    if (!account) {
+        account = await User.findOne({
+            resetPasswordToken,
+            resetPasswordExpire: { $gt: Date.now() },
+        });
+    }
+    return account;
+};
 
 // Cookie + redirect helper — OAuth callback-larında istifadə olunur
 const setOAuthCookieAndRedirect = (res, user) => {
@@ -467,21 +509,20 @@ export const logout = catchAsyncErrors(async (req, res, next) => {
 // İstifadəçinin emailinə şifrə sıfırlama linki göndərir.
 // =====================================================================
 export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
+    const email = String(req.body.email || "").trim().toLowerCase();
+
+    if (!email) {
+        return next(new ErrorHandler("Email daxil edin", 400));
+    }
 
     // Dörd mərhələli axtarış: SuperAdmin -> Admin -> Blogger -> User
-    let user = await SuperAdmin.findOne({ email: req.body.email });
-    if (!user) {
-        user = await Admin.findOne({ email: req.body.email });
-    }
-    if (!user) {
-        user = await Blogger.findOne({ email: req.body.email });
-    }
-    if (!user) {
-        user = await User.findOne({ email: req.body.email });
-    }
+    const user = await findAccountByEmail(email);
 
     if (!user) {
-        return next(new ErrorHandler("İstifadəçi tapılmadı", 404));
+        return res.status(200).json({
+            success: true,
+            message: "Əgər bu email sistemdə varsa, şifrə sıfırlama linki göndərildi",
+        });
     }
 
     // getResetPasswordToken() — User/Admin modelindəki metoddur.
@@ -504,18 +545,21 @@ export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
     const resetUrl = `${frontendUrl}/password/reset/${resetToken}`;
 
     // HTML email şablonu hazırlanır — istifadəçinin adı və link daxil edilir
-    const message = getResetPasswordTemplate(user.name, resetUrl);
+    const displayName = getDisplayName(user);
+    const message = getResetPasswordTemplate(displayName, resetUrl);
+    const textMessage = getResetPasswordText(displayName, resetUrl);
 
     try {
         await sendEmail({
             email:   user.email,
-            subject: "Şifrənin sıfırlanması mərhələsi",
+            subject: "Brendex Group | Real şifrə sıfırlama istəyi",
             message,
+            text:    textMessage,
         });
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
-            message: "Emailinizi yoxlayın",
+            message: "Əgər bu email sistemdə varsa, şifrə sıfırlama linki göndərildi",
         });
 
     } catch (err) {
@@ -551,33 +595,15 @@ export const resetPassword = catchAsyncErrors(async (req, res, next) => {
         .update(req.params.token)
         .digest("hex");
 
-    // Dörd mərhələli axtarış: SuperAdmin -> Admin -> Blogger -> User
-    let user = await SuperAdmin.findOne({
-        resetPasswordToken,
-        resetPasswordExpire: { $gt: Date.now() },
-    });
-    if (!user) {
-        user = await Admin.findOne({
-            resetPasswordToken,
-            resetPasswordExpire: { $gt: Date.now() },
-        });
-    }
-    if (!user) {
-        user = await Blogger.findOne({
-            resetPasswordToken,
-            resetPasswordExpire: { $gt: Date.now() },
-        });
-    }
-    if (!user) {
-        user = await User.findOne({
-            resetPasswordToken,
-            resetPasswordExpire: { $gt: Date.now() },
-        });
-    }
+    const user = await findAccountByResetToken(resetPasswordToken);
 
     // Token yanlışdırsa və ya 30 dəqiqə keçibsə — 400 Bad Request
     if (!user) {
         return next(new ErrorHandler("Reset token yanlışdır və ya müddəti keçib", 400));
+    }
+
+    if (!req.body.password || req.body.password.length < 8) {
+        return next(new ErrorHandler("Şifrə ən azı 8 simvol olmalıdır", 400));
     }
 
     // İki dəfə daxil edilən şifrələr uyğunlaşmalıdır
@@ -593,7 +619,10 @@ export const resetPassword = catchAsyncErrors(async (req, res, next) => {
     // Validation-dan keçməsi üçün bəzi sahələrin (əgər varsa) doldurulmasını yoxla
     await user.save({ validateBeforeSave: false });
 
-    sendToken(user, 200, res);
+    return res.status(200).json({
+        success: true,
+        message: "Şifrəniz uğurla yeniləndi",
+    });
 });
 
 

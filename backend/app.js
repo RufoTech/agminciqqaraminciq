@@ -11,6 +11,9 @@
 // express — Node.js üçün veb framework.
 // HTTP server, routing, middleware sistemi — hamısı buradan gəlir.
 import express from "express";
+import { createServer } from "http";
+import { Server } from "socket.io";
+import { setupChatSocket } from "./config/chatSocket.js";
 
 // dotenv — .env / config.env faylındakı gizli məlumatları
 // process.env-ə yükləyən kitabxana.
@@ -56,6 +59,7 @@ import orderRoutes       from "./routes/orderRoutes.js";
 import commissionRoutes  from "./routes/commissionRoutes.js";
 import bloggerRoutes     from "./routes/bloggerRoutes.js";
 import bonusRoutes       from "./routes/bonusRoutes.js";
+import sellerReviewRoutes from "./routes/sellerReviewRoutes.js";
 
 // errorsMiddleware — bütün xətaları mərkəzi idarə edir.
 // Bu middleware route-lardan SONRA qeyd edilməlidir.
@@ -167,16 +171,16 @@ const allowedOrigins = [...new Set(
 
 app.use(cors({
     origin: (origin, cb) => {
-        if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+        if (!origin || allowedOrigins.includes(origin) || origin.startsWith("http://localhost:")) {
+            return cb(null, true);
+        }
         cb(new Error(`CORS: ${origin} icazəli deyil`));
     },
     methods:     ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
 }));
 
-// ── JSON PARSER ──────────────────────────────────────────────────────
-// req.body-ni oxunaqlı edir. limit: 10mb — böyük JSON yüklərindən qorunma.
-// Olmasa: POST/PUT sorğularında req.body = undefined.
+app.use("/commerce/mehsullar/commission/webhook", express.raw({ type: "application/json" }));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
@@ -251,6 +255,9 @@ app.use("/commerce/mehsullar", bloggerRoutes);
 // Bonus route-ları: balans, əməliyyatlar, admin konfiqurasiya
 app.use("/commerce/mehsullar/bonus", bonusRoutes);
 
+// Satıcı rəy/reytinq route-ları
+app.use("/commerce/mehsullar", sellerReviewRoutes);
+
 
 // =====================================================================
 // XƏTA MİDDLEWARE-İ
@@ -274,8 +281,22 @@ app.use(errorsMiddleware);
 // app.listen() — serveri göstərilən portda işə salır.
 // Callback funksiyası server hazır olduqda çağırılır.
 // =====================================================================
-const PORT = process.env.PORT || 3010;
+const PORT = process.env.PORT || 3011;
 
-app.listen(PORT, () => {
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+    cors: {
+        origin: (origin, cb) => {
+            if (!origin || allowedOrigins.includes(origin) || origin.startsWith("http://localhost:")) {
+                return cb(null, true);
+            }
+            cb(new Error(`CORS: ${origin} icazəli deyil`));
+        },
+        credentials: true,
+    },
+});
+setupChatSocket(io);
+
+httpServer.listen(PORT, () => {
     console.log(`Server ${PORT}-ci portda çalışır...`);
 });
